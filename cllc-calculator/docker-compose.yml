@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  svelte-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - '5173:5173' # Map the Vite dev server port to your local machine
+    volumes:
+      # Mount your local project directory to /app in the container
+      - .:/app
+      # Prevent the container from using your local node_modules folder
+      # This ensures it uses the Linux binaries installed inside the container
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      # Optional: Force Vite to use polling if standard HMR file watching fails
+      - CHOKIDAR_USEPOLLING=true

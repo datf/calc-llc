@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+/* You can define your Coal LLC custom colors or themes right here using CSS variables */
+@theme {
+  --color-coal-dark: #1a1a1a;
+  --color-coal-gold: #ffd700;
+  --font-game: 'Courier New', Courier, monospace;
+}
+/* ADD THIS LINE */
+html {
+  scroll-padding-top: 140px; 
+}
+
+body {
+  @apply bg-coal-dark text-white font-game;
+}
+

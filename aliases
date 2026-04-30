@@ -1,0 +1,4 @@
+alias pupb='podman compose up --build'
+alias pupd='podman compose up -d'
+alias dnpm='podman compose exec svelte-app npm'
+
