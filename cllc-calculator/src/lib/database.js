@@ -80,6 +80,7 @@ export const employees = new Map(
 
 export const tiles = tilesRaw;
 
+
 export function getItemsForProfession(professionId) {
   const prof = professions.get(professionId);
   if (!prof) return [];
@@ -88,32 +89,62 @@ export function getItemsForProfession(professionId) {
   const existingItems = new Set(itemOrderRaw || []);
   
   return Array.from(items.values()).filter(item => {
-    // 1. Must be in the sorted order array
     if (!existingItems.has(item.itemID)) return false;
-    
-    // 2. Cannot be explicitly locked by Type!
     if (lockedTypes.has(item.itemType)) return false;
-    
     return true;
   });
 }
+
+// New API: Returns bonus items that are unlocked and available for the secondary shop
+export function getBonusShopItems(professionId) {
+  const prof = professions.get(professionId);
+  if (!prof) return [];
+  
+  const lockedTypes = new Set(prof.items_locked || []);
+  const existingItems = new Set(itemOrderRaw || []);
+  
+  return Array.from(items.values()).filter(item => {
+    if (existingItems.has(item.itemID)) return false; // Ignore standard items
+    if (lockedTypes.has(item.itemType)) return false; // Respect profession locks
+    
+    // Must be explicitly unlocked
+    return item.itemUnlocked === true || item.itemUnlocked === "true";
+  });
+}
+
+// New API: Returns locked bonus items (quest rewards). Forces price to 0.
+export function getQuestItems(professionId) {
+  const prof = professions.get(professionId);
+  if (!prof) return [];
+  
+  const lockedTypes = new Set(prof.items_locked || []);
+  const existingItems = new Set(itemOrderRaw || []);
+  
+  return Array.from(items.values())
+    .filter(item => {
+      if (existingItems.has(item.itemID)) return false; // Ignore standard items
+      if (lockedTypes.has(item.itemType)) return false; // Respect profession locks
+      
+      // Must be locked
+      return item.itemUnlocked === false || item.itemUnlocked === "false" || item.itemUnlocked === undefined;
+    })
+    .map(item => ({
+      ...item,
+      itemBuyPrice: 0n // Enforce 0 cost at the data layer to prevent UI mistakes
+    }));
+}
+
+// --- EMPLOYEE & PASSIVE SELECTORS ---
 
 // 2. NEW LOGIC: Filter employees by looking up the active profession
 export function getOrgChart(professionId) {
   const prof = professions.get(professionId);
   const lockedEmployees = new Set(prof?.locked_employees || []);
 
-  // Filter out any employees that are locked for this specific profession
   const allEmployees = Array.from(employees.values()).filter(emp => !lockedEmployees.has(emp.employee_id));
-
-  // Get a list of all valid level names that actually exist in the game (e.g., "0", "1")
   const validLevels = new Set(allEmployees.map(e => e.level_name));
-
-  // Base employees are those whose upgrades_from points to a level that DOES NOT exist 
-  // (Like the Intern pointing to "23")
   const baseEmployees = allEmployees.filter(emp => !validLevels.has(emp.upgrades_from));
 
-  // Build the tree UPWARDS by finding employees that upgrade FROM the current level
   function findPromotions(currentLevelName) {
     const promotions = allEmployees.filter(e => e.upgrades_from === currentLevelName);
     if (promotions.length === 0) return null;
@@ -124,7 +155,6 @@ export function getOrgChart(professionId) {
     }));
   }
 
-  // Return the base employees (Interns) with their promotion branches attached
   return baseEmployees.map(base => ({
     ...base,
     promotions: findPromotions(base.level_name)
