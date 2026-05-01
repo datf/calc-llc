@@ -96,7 +96,7 @@
   });
 
   // --- TABLE FILTERS (Persisted in gameState) ---
-  
+
   function toggleLayerFilter(layer) {
     if (gameState.calculatorHiddenLayers.includes(layer)) {
       gameState.calculatorHiddenLayers = gameState.calculatorHiddenLayers.filter(l => l !== layer);
@@ -113,7 +113,6 @@
     }
   }
 
-  // Extract unique layers and find their "basic" block pic
   let layerOptions = $derived.by(() => {
     const map = new Map();
     for (const t of tiles) {
@@ -126,7 +125,6 @@
     return Array.from(map.entries()).map(([name, pic]) => ({name, pic}));
   });
 
-  // Extract unique materials and their pics (excluding "basic")
   let materialOptions = $derived.by(() => {
     const map = new Map();
     for (const t of tiles) {
@@ -138,12 +136,9 @@
     return Array.from(map.entries()).map(([name, pic]) => ({name, pic}));
   });
 
-  // The dynamically filtered array of tiles for the table
   let filteredTiles = $derived(
     tiles.filter(t => {
-      // 1. Check if probability is explicitly 0 (handles string or number)
       if (t.probability !== undefined && Number(t.probability) === 0) return false;
-      // 2. Check user filters using the global state variables
       if (gameState.calculatorHiddenLayers.includes(t.layer)) return false;
       if (gameState.calculatorHiddenMaterials.includes(t.resource)) return false;
       return true;
@@ -156,7 +151,6 @@
     || gameState.calculatorLoadouts[0]
   );
 
-  // Derive which passives are currently active based on equipped items
   let activePassiveKeys = $derived.by(() => {
     let keys = new Set();
     const allActive = [...activeLoadout.modifiers, ...activeLoadout.independents];
@@ -170,7 +164,6 @@
     return keys;
   });
 
-  // Derive a clean array of passives the player actually owns (value > 0)
   let nonZeroPassives = $derived.by(() => {
     return Object.entries(gameState.passives)
       .filter(([k, v]) => v > 0)
@@ -476,7 +469,7 @@
                   </div>
                 </th>
               {/each}
-              
+
               {#if filteredTiles.length === 0}
                 <th class="p-4 border-b border-gray-700 text-gray-500 italic font-normal">No tiles match current filters.</th>
               {/if}
@@ -547,7 +540,23 @@
                 {#each filteredTiles as tile}
                   {@const ttk = getTimeToDestroyInfo(tile, rowDPS, maxTime)}
                   <td class="p-4 align-middle border-r border-gray-700 last:border-r-0 text-center">
-                    <div class="font-mono font-bold {ttk.color} text-base">{ttk.text}</div>
+                    <div class="relative group cursor-help inline-block w-full">
+                      <div class="font-mono font-bold {ttk.color} text-base">{ttk.text}</div>
+                      
+                      <!-- Yield Tooltip -->
+                      <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center bg-gray-900 border border-gray-600 px-3 py-2 rounded shadow-[0_0_10px_rgba(0,0,0,0.5)] z-50 whitespace-nowrap pointer-events-none">
+                        <span class="text-[9px] text-gray-400 uppercase tracking-wider mb-1">Yield / Block</span>
+                        <span class="font-mono text-coal-gold font-bold text-sm">
+                          {#if tile.min_drop === tile.max_drop}
+                            {formatLargeNumber(tile.min_drop)}
+                          {:else}
+                            {formatLargeNumber(tile.min_drop)} - {formatLargeNumber(tile.max_drop)}
+                          {/if}
+                        </span>
+                        <!-- Bottom Arrow -->
+                        <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-600"></div>
+                      </div>
+                    </div>
                   </td>
                 {/each}
                 

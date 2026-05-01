@@ -9,7 +9,13 @@ const scientificFormatter = new Intl.NumberFormat('en-US', {
 });
 
 export function formatLargeNumber(value) {
-  const bigValue = BigInt(value || 0);
+  let bigValue;
+
+  try {
+    bigValue = BigInt(value || 0);
+  } catch (error) {
+    bigValue = 0n; // That moonstone bug...
+  }
 
   if (bigValue >= 10000000000n) {
     return scientificFormatter.format(bigValue).toLowerCase().replace('e', 'e+');
