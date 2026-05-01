@@ -95,6 +95,63 @@
     return { heldWeapons, independentSources, modifiers };
   });
 
+  // --- TABLE FILTERS ---
+  let hiddenLayers = $state([]);
+  let hiddenMaterials = $state([]);
+
+  function toggleLayerFilter(layer) {
+    if (hiddenLayers.includes(layer)) {
+      hiddenLayers = hiddenLayers.filter(l => l !== layer);
+    } else {
+      hiddenLayers = [...hiddenLayers, layer];
+    }
+  }
+
+  function toggleMaterialFilter(mat) {
+    if (hiddenMaterials.includes(mat)) {
+      hiddenMaterials = hiddenMaterials.filter(m => m !== mat);
+    } else {
+      hiddenMaterials = [...hiddenMaterials, mat];
+    }
+  }
+
+  // Extract unique layers and find their "basic" block pic
+  let layerOptions = $derived.by(() => {
+    const map = new Map();
+    for (const t of tiles) {
+      if (!map.has(t.layer)) {
+        map.set(t.layer, t.pics_in_rock_base64?.[0]);
+      } else if (t.resource === 'basic') {
+        map.set(t.layer, t.pics_in_rock_base64?.[0]);
+      }
+    }
+    return Array.from(map.entries()).map(([name, pic]) => ({name, pic}));
+  });
+
+  // Extract unique materials and their pics (excluding "basic")
+  let materialOptions = $derived.by(() => {
+    const map = new Map();
+    for (const t of tiles) {
+      if (t.resource !== 'basic' && !map.has(t.resource)) {
+        const pic = t.pic_material_base64;
+	if (pic) map.set(t.resource, pic);
+      }
+    }
+    return Array.from(map.entries()).map(([name, pic]) => ({name, pic}));
+  });
+
+  // The dynamically filtered array of tiles for the table
+  let filteredTiles = $derived(
+    tiles.filter(t => {
+      // 1. Check if probability is explicitly 0 (handles string or number)
+      if (t.probability !== undefined && Number(t.probability) === 0) return false;
+      // 2. Check user filters
+      if (hiddenLayers.includes(t.layer)) return false;
+      if (hiddenMaterials.includes(t.resource)) return false;
+      return true;
+    })
+  );
+
   // --- LOADOUT BUILDER STATE ---
   let activeLoadout = $derived(
     gameState.calculatorLoadouts.find(l => l.id === gameState.calculatorActiveLoadoutId) 
@@ -360,6 +417,47 @@
         </div>
       </div>
 
+      <!-- TABLE FILTERS -->
+      <div class="mb-4 bg-gray-900 border border-gray-700 rounded-xl p-4">
+        
+        <!-- Layer Filter -->
+        <div class="mb-4">
+          <h3 class="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wider">Filter by Layer</h3>
+          <div class="flex flex-wrap gap-2">
+            {#each layerOptions as layer}
+              <button 
+                onclick={() => toggleLayerFilter(layer.name)}
+                class="flex items-center gap-1.5 px-2 py-1 rounded border transition-all text-xs font-bold select-none {hiddenLayers.includes(layer.name) ? 'bg-black border-gray-700 text-gray-600 opacity-50' : 'bg-gray-800 border-gray-500 text-white hover:bg-gray-700 hover:border-gray-400'}"
+              >
+                {#if layer.pic}
+                  <img src={layer.pic} alt={layer.name} class="w-4 h-4 rendering-pixelated object-contain" />
+                {/if}
+                <span class="capitalize">{layer.name}</span>
+              </button>
+            {/each}
+          </div>
+        </div>
+
+        <!-- Material Filter -->
+        <div>
+          <h3 class="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wider">Filter by Material</h3>
+          <div class="flex flex-wrap gap-2">
+            {#each materialOptions as mat}
+              <button 
+                onclick={() => toggleMaterialFilter(mat.name)}
+                class="flex items-center gap-1.5 px-2 py-1 rounded border transition-all text-xs font-bold select-none {hiddenMaterials.includes(mat.name) ? 'bg-black border-gray-700 text-gray-600 opacity-50' : 'bg-gray-800 border-gray-500 text-white hover:bg-gray-700 hover:border-gray-400'}"
+              >
+                {#if mat.pic}
+                  <img src={mat.pic} alt={mat.name} class="w-4 h-4 rendering-pixelated object-contain" />
+                {/if}
+                <span class="capitalize">{mat.name}</span>
+              </button>
+            {/each}
+          </div>
+        </div>
+
+      </div>
+
       <!-- INVERTED DATA TABLE (Rows = Loadouts, Cols = Tiles) -->
       <div class="overflow-x-auto rounded-lg border border-gray-700">
         <table class="w-full text-left border-collapse">
@@ -367,19 +465,23 @@
             <tr class="bg-gray-900 text-white text-sm uppercase tracking-wider">
               <th class="p-4 border-b border-r border-gray-700 min-w-[280px] sticky left-0 bg-gray-900 z-20 shadow-[2px_0_5px_rgba(0,0,0,0.3)]">Loadout</th>
               
-              {#each tiles as tile}
+              {#each filteredTiles as tile}
                 <th class="p-4 border-b border-gray-700 min-w-[120px]">
                   <div class="flex items-center gap-2">
                     {#if tile.pics_in_rock_base64 && tile.pics_in_rock_base64.length > 0}
                       <img src={tile.pics_in_rock_base64[0]} alt={tile.resource} class="w-6 h-6 rendering-pixelated object-contain" />
                     {/if}
                     <div>
-                      <div class="font-bold leading-tight">{tile.resource}</div>
-                      <div class="text-[10px] text-gray-400 leading-tight">{tile.layer}</div>
+                      <div class="font-bold leading-tight capitalize">{tile.resource}</div>
+                      <div class="text-[10px] text-gray-400 leading-tight capitalize">{tile.layer}</div>
                     </div>
                   </div>
                 </th>
               {/each}
+
+              {#if filteredTiles.length === 0}
+                <th class="p-4 border-b border-gray-700 text-gray-500 italic font-normal">No tiles match current filters.</th>
+              {/if}
             </tr>
           </thead>
           <tbody class="text-sm divide-y divide-gray-700">
@@ -444,12 +546,16 @@
                 </td>
 
                 <!-- Tile Calculations -->
-                {#each tiles as tile}
+                {#each filteredTiles as tile}
                   {@const ttk = getTimeToDestroyInfo(tile, rowDPS, maxTime)}
                   <td class="p-4 align-middle border-r border-gray-700 last:border-r-0 text-center">
                     <div class="font-mono font-bold {ttk.color} text-base">{ttk.text}</div>
                   </td>
                 {/each}
+                
+                {#if filteredTiles.length === 0}
+                  <td class="p-4 bg-gray-900/50"></td>
+                {/if}
 
               </tr>
             {/each}
