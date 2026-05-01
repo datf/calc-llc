@@ -1,7 +1,7 @@
 <!-- src/routes/calculator/+page.svelte -->
 <script>
   import { gameState } from '$lib/game.svelte.js';
-  import { tiles, items, employees } from '$lib/database.js';
+  import { tiles, items, employees, passiveMap } from '$lib/database.js';
   import { formatLargeNumber } from '$lib/utils.js';
   import { calculateLoadoutDPS } from '$lib/calculator.js';
 
@@ -12,7 +12,7 @@
   const INDEPENDENT_TYPES = ["poison_gun", "bomb", "flamethrower", "drill", "mortar_gun", "roundhouse_kick", "jet"];
   const MODIFIER_TYPES = ["water_gun", "water_staff"]; 
   
-  // NEW: Items that act as binary effects or single-use global cooldowns
+  // Items that act as binary effects or single-use global cooldowns
   const NON_STACKABLE_TYPES = ["roundhouse_kick", "poison_gun", "poison_staff", "flamethrower", "jet", "water_gun", "water_staff"];
 
   function formatEmployeeName(id) {
@@ -28,7 +28,6 @@
     let independentSources = [];
     let modifiers = [];
     
-    // 1. Add owned guns/equipment
     for (const [itemId, count] of Object.entries(gameState.inventory)) {
       if (count > 0) {
         const itemObj = items.get(itemId);
@@ -58,7 +57,6 @@
       }
     }
 
-    // 2. Add hired employees
     for (const [empId, count] of Object.entries(gameState.hiredEmployees)) {
       if (count > 0n) {
         const empObj = employees.get(empId);
@@ -87,7 +85,7 @@
             pics: compositePics,
             category: 'independent',
             ownedCount: Number(count),
-            isStackable: true, // Employees always stack
+            isStackable: true, 
             maxCount: Number(count)
           });
         }
@@ -102,6 +100,31 @@
     gameState.calculatorLoadouts.find(l => l.id === gameState.calculatorActiveLoadoutId) 
     || gameState.calculatorLoadouts[0]
   );
+
+  // Derive which passives are currently active based on equipped items
+  let activePassiveKeys = $derived.by(() => {
+    let keys = new Set();
+    const allActive = [...activeLoadout.modifiers, ...activeLoadout.independents];
+    if (activeLoadout.heldWeapon) allActive.push(activeLoadout.heldWeapon);
+
+    for (const source of allActive) {
+      const typeKey = source.type === 'equipment' ? source.data.itemType : 'employee';
+      const relatedPassives = passiveMap[typeKey] || [];
+      relatedPassives.forEach(p => keys.add(p));
+    }
+    return keys;
+  });
+
+  // Derive a clean array of passives the player actually owns (value > 0)
+  let nonZeroPassives = $derived.by(() => {
+    return Object.entries(gameState.passives)
+      .filter(([k, v]) => v > 0)
+      .map(([k, v]) => ({
+        key: k,
+        name: k.split('_').join(' '),
+        value: v
+      }));
+  });
 
   function addLoadout() {
     gameState.calculatorLoadoutCounter++;
@@ -315,6 +338,24 @@
                 {/each}
               </div>
             </div>
+
+            <!-- Passives Summary -->
+            <div class="p-4 bg-gray-800/50 rounded-lg border border-purple-900/50 xl:col-span-3">
+              <h3 class="text-xs font-bold text-purple-400 mb-3 uppercase tracking-wider">Active Passives Summary</h3>
+              <div class="flex flex-wrap gap-2">
+                {#each nonZeroPassives as passive}
+                  {@const isActive = activePassiveKeys.has(passive.key)}
+                  <div class="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono border transition-colors {isActive ? 'bg-purple-900/40 border-purple-400 text-white shadow-[0_0_8px_rgba(168,85,247,0.2)]' : 'bg-black border-gray-700 text-gray-500 opacity-60'}">
+                    <span class="uppercase">{passive.name}:</span>
+                    <span class="font-bold {isActive ? 'text-coal-gold' : ''}">+{Math.round(passive.value * 100)}%</span>
+                  </div>
+                {/each}
+                {#if nonZeroPassives.length === 0}
+                  <span class="text-xs text-gray-500 italic">No passives upgraded yet.</span>
+                {/if}
+              </div>
+            </div>
+            
           </div>
         </div>
       </div>
@@ -345,13 +386,20 @@
             {#each gameState.calculatorLoadouts as loadout}
               {@const rowDPS = calculateLoadoutDPS(loadout, gameState)}
               {@const maxTime = gameState.secondsPerRound || 300}
+              {@const isEditing = gameState.calculatorActiveLoadoutId === loadout.id}
               
-              <tr class="hover:bg-gray-700/50 transition-colors">
+              <tr class="hover:bg-gray-700/50 transition-colors {isEditing ? 'bg-gray-800/80' : ''}">
                 
                 <!-- Loadout Info (Sticky Left) -->
                 <td class="p-4 border-r border-gray-700 sticky left-0 bg-gray-800 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.3)]">
                   <div class="flex justify-between items-start mb-2">
-                    <div class="font-bold text-white">{loadout.name}</div>
+                    <button 
+                      class="font-bold flex items-center gap-2 transition-colors focus:outline-none {isEditing ? 'text-coal-gold' : 'text-white hover:text-gray-300'}"
+                      onclick={() => gameState.calculatorActiveLoadoutId = loadout.id}
+                      title="Click to edit this loadout"
+                    >
+                      {loadout.name}
+                    </button>
                     <div class="text-xs font-mono text-gray-300 bg-gray-900 border border-gray-700 px-2 py-1 rounded">
                       {formatDPS(rowDPS)}
                     </div>
