@@ -54,6 +54,8 @@ class GameState {
   passives = $state(
     Object.fromEntries(PASSIVE_KEYS.map(key => [key, 0.0]))
   );
+  calculatorHiddenMaterials = $state([]);
+  calculatorHiddenLayers = $state([]);
   
   get quota() {
     if (gameState.mode === 'Peaceful') return 0n;

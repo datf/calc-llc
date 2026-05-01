@@ -95,23 +95,21 @@
     return { heldWeapons, independentSources, modifiers };
   });
 
-  // --- TABLE FILTERS ---
-  let hiddenLayers = $state([]);
-  let hiddenMaterials = $state([]);
-
+  // --- TABLE FILTERS (Persisted in gameState) ---
+  
   function toggleLayerFilter(layer) {
-    if (hiddenLayers.includes(layer)) {
-      hiddenLayers = hiddenLayers.filter(l => l !== layer);
+    if (gameState.calculatorHiddenLayers.includes(layer)) {
+      gameState.calculatorHiddenLayers = gameState.calculatorHiddenLayers.filter(l => l !== layer);
     } else {
-      hiddenLayers = [...hiddenLayers, layer];
+      gameState.calculatorHiddenLayers = [...gameState.calculatorHiddenLayers, layer];
     }
   }
 
   function toggleMaterialFilter(mat) {
-    if (hiddenMaterials.includes(mat)) {
-      hiddenMaterials = hiddenMaterials.filter(m => m !== mat);
+    if (gameState.calculatorHiddenMaterials.includes(mat)) {
+      gameState.calculatorHiddenMaterials = gameState.calculatorHiddenMaterials.filter(m => m !== mat);
     } else {
-      hiddenMaterials = [...hiddenMaterials, mat];
+      gameState.calculatorHiddenMaterials = [...gameState.calculatorHiddenMaterials, mat];
     }
   }
 
@@ -134,7 +132,7 @@
     for (const t of tiles) {
       if (t.resource !== 'basic' && !map.has(t.resource)) {
         const pic = t.pic_material_base64;
-	if (pic) map.set(t.resource, pic);
+        if (pic) map.set(t.resource, pic);
       }
     }
     return Array.from(map.entries()).map(([name, pic]) => ({name, pic}));
@@ -145,9 +143,9 @@
     tiles.filter(t => {
       // 1. Check if probability is explicitly 0 (handles string or number)
       if (t.probability !== undefined && Number(t.probability) === 0) return false;
-      // 2. Check user filters
-      if (hiddenLayers.includes(t.layer)) return false;
-      if (hiddenMaterials.includes(t.resource)) return false;
+      // 2. Check user filters using the global state variables
+      if (gameState.calculatorHiddenLayers.includes(t.layer)) return false;
+      if (gameState.calculatorHiddenMaterials.includes(t.resource)) return false;
       return true;
     })
   );
@@ -427,7 +425,7 @@
             {#each layerOptions as layer}
               <button 
                 onclick={() => toggleLayerFilter(layer.name)}
-                class="flex items-center gap-1.5 px-2 py-1 rounded border transition-all text-xs font-bold select-none {hiddenLayers.includes(layer.name) ? 'bg-black border-gray-700 text-gray-600 opacity-50' : 'bg-gray-800 border-gray-500 text-white hover:bg-gray-700 hover:border-gray-400'}"
+                class="flex items-center gap-1.5 px-2 py-1 rounded border transition-all text-xs font-bold select-none {gameState.calculatorHiddenLayers.includes(layer.name) ? 'bg-black border-gray-700 text-gray-600 opacity-50' : 'bg-gray-800 border-gray-500 text-white hover:bg-gray-700 hover:border-gray-400'}"
               >
                 {#if layer.pic}
                   <img src={layer.pic} alt={layer.name} class="w-4 h-4 rendering-pixelated object-contain" />
@@ -445,7 +443,7 @@
             {#each materialOptions as mat}
               <button 
                 onclick={() => toggleMaterialFilter(mat.name)}
-                class="flex items-center gap-1.5 px-2 py-1 rounded border transition-all text-xs font-bold select-none {hiddenMaterials.includes(mat.name) ? 'bg-black border-gray-700 text-gray-600 opacity-50' : 'bg-gray-800 border-gray-500 text-white hover:bg-gray-700 hover:border-gray-400'}"
+                class="flex items-center gap-1.5 px-2 py-1 rounded border transition-all text-xs font-bold select-none {gameState.calculatorHiddenMaterials.includes(mat.name) ? 'bg-black border-gray-700 text-gray-600 opacity-50' : 'bg-gray-800 border-gray-500 text-white hover:bg-gray-700 hover:border-gray-400'}"
               >
                 {#if mat.pic}
                   <img src={mat.pic} alt={mat.name} class="w-4 h-4 rendering-pixelated object-contain" />
@@ -478,7 +476,7 @@
                   </div>
                 </th>
               {/each}
-
+              
               {#if filteredTiles.length === 0}
                 <th class="p-4 border-b border-gray-700 text-gray-500 italic font-normal">No tiles match current filters.</th>
               {/if}
