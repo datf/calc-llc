@@ -84,15 +84,15 @@ export function getItemsForProfession(professionId) {
   const prof = professions.get(professionId);
   if (!prof) return [];
   
-  const lockedIds = new Set(prof.items_locked || []);
+  const lockedTypes = new Set(prof.items_locked || []);
   const existingItems = new Set(itemOrderRaw || []);
   
   return Array.from(items.values()).filter(item => {
     // 1. Must be in the sorted order array
     if (!existingItems.has(item.itemID)) return false;
     
-    // 2. Cannot be explicitly locked by ID OR by Type!
-    if (lockedIds.has(item.itemID) || lockedIds.has(item.itemType)) return false;
+    // 2. Cannot be explicitly locked by Type!
+    if (lockedTypes.has(item.itemType)) return false;
     
     return true;
   });

@@ -21,7 +21,6 @@ export const DPS_FORMULAS = {
   // Assuming these items have a "damage" field. If they use a different capital letter (like "Damage"), change it!
   bomb: "damage * (1 + p_bomb_damage)",
   nuke: "damage * (1 + p_bomb_damage)",
-  flamethrower: "damage * (1 + p_fire_damage)",
   axe: "damage * (1 + p_axe_damage)",
   battleaxe: "damage * (1 + p_axe_damage)",
   
@@ -43,8 +42,11 @@ export const DPS_FORMULAS = {
   // Magic Staffs (Assuming fields are missile_damage, missile_count, cooldown_secs)
   staff: "((missile_count / cooldown_secs) * missile_damage) * (1 + p_magic_missiles_damage)",
   
-  // Poison/Water
-  poison_gun: "damage * (1 + p_poison_damage)",
+  // Poison does damage per tick, but you only get a tick every 3s
+  poison_gun: "damage * (1 + p_poison_damage) / 3",
+  // Fire is similar, but ticks every 70 frames and we assume physics at 60Hz
+  flamethrower: "damage * (1 + p_fire_damage) * 6 / 7",
+
   water_gun: "0", // Water gun does no base DPS itself
 
   employee_miner: "(weapon_strength * (1 + p_employee_miner_damage))",
