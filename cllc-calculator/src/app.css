@@ -9,19 +9,21 @@
 :root {
   --bg-main: #1a1a1a;
   --bg-surface: #2a2a2a;
+  --bg-surface-hover: #3a3a3a;
   --text-main: #ffffff;
   --text-muted: #9ca3af;
-  --border-main: #374151; /* gray-700 */
+  --border-main: #374151;
   --accent: #ffd700;
 }
 
 html.light {
   --bg-main: #f3f4f6;
   --bg-surface: #ffffff;
+  --bg-surface-hover: #e5e7eb;
   --text-main: #111827;
   --text-muted: #4b5563;
   --border-main: #d1d5db;
-  --accent: #d97706; /* darker gold/amber for light mode readability */
+  --accent: #d97706;
 }
 
 body {
@@ -32,8 +34,9 @@ body {
 }
 
 .theme-surface { background-color: var(--bg-surface); }
-.theme-surface-hover:hover { filter: brightness(1.2); }
-.light .theme-surface-hover:hover { filter: brightness(0.95); }
+.theme-surface-hover:hover { 
+  background-color: var(--bg-surface-hover); 
+}
 
 .theme-text { color: var(--text-main); }
 .theme-text-muted { color: var(--text-muted); }
