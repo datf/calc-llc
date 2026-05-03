@@ -1,6 +1,5 @@
 
 <script>
-  import Modal from '$lib/components/Modal.svelte';
   import { gameState } from '$lib/game.svelte.js';
   import { getItemsForProfession, items } from '$lib/database.js';
   import { formatLargeNumber, formatDecimal } from '$lib/utils.js';
