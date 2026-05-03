@@ -8,7 +8,7 @@ export const GAME_OPTIONS = {
   roundTimes: [100, 200, 300]
 };
 
-const quota = [
+const QUOTA_MILESTONES = [
 	0n,
 	40n,
 	80n,
@@ -73,20 +73,20 @@ class GameState {
   get quota() {
     if (gameState.mode === 'Peaceful') return 0n;
     if (gameState.mode === 'Tough Start'){
-      if (gameState.day < quota.length) {
-        return quota[gameState.day] / 2n;
+      if (gameState.day < QUOTA_MILESTONES.length) {
+        return QUOTA_MILESTONES[gameState.day] / 2n;
       }
       else {
         const dayMultiplier = BigInt(gameState.day);
-        return (quota[quota.length - 1] / 2n) * (4n ** (dayMultiplier - BigInt(quota.length)));
+        return (QUOTA_MILESTONES[QUOTA_MILESTONES.length - 1] / 2n) * (4n ** (dayMultiplier - BigInt(QUOTA_MILESTONES.length)));
       }
     }
-    else if (gameState.day < quota.length) {
-      return quota[gameState.day];
+    else if (gameState.day < QUOTA_MILESTONES.length) {
+      return QUOTA_MILESTONES[gameState.day];
     }
     else {
       const dayMultiplier = BigInt(gameState.day);
-      return quota[quota.length - 1] * (4n ** (dayMultiplier - BigInt(quota.length)));
+      return QUOTA_MILESTONES[QUOTA_MILESTONES.length - 1] * (4n ** (dayMultiplier - BigInt(QUOTA_MILESTONES.length)));
     }
   }
 
@@ -94,6 +94,8 @@ class GameState {
   buyBonusItem(itemID) {
     // Lock the item so it is removed from the shop
     this.itemUnlockedStates[itemID] = false;
+
+    const itemObj = items.get(itemID);
 
     // Process systemic side-effects
     if (itemObj.itemType === 'auto_loot_chests') {
