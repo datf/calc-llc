@@ -54,6 +54,19 @@ class GameState {
   passives = $state(
     Object.fromEntries(PASSIVE_KEYS.map(key => [key, 0.0]))
   );
+  
+  // NEW: Tracks explicit shop availability overrides from the save file
+  // (e.g., setting to 'false' once a player buys a bonus item)
+  itemUnlockedStates = $state({}); 
+  
+  // NEW: System tracker for bonus effects
+  bonus_equipment_manager = $state({
+    auto_loot_chests: false,
+    item_filter: false,
+    current_vacuum: 0,
+    shift_layers_up: 0
+  });
+
   calculatorHiddenMaterials = $state([]);
   calculatorHiddenLayers = $state([]);
   
@@ -76,6 +89,26 @@ class GameState {
       return quota[quota.length - 1] * (4n ** (dayMultiplier - BigInt(quota.length)));
     }
   }
+
+  // Helper method for the UI to purchase items and lock them out of the shop
+  buyBonusItem(itemID) {
+    // Lock the item so it is removed from the shop
+    this.itemUnlockedStates[itemID] = false;
+
+    // Process systemic side-effects
+    if (itemObj.itemType === 'auto_loot_chests') {
+      this.bonus_equipment_manager.auto_loot_chests = true;
+    } else if (itemObj.itemType === 'item_filter') {
+      this.bonus_equipment_manager.item_filter = true;
+    } else if (itemObj.itemType === 'BonusEffect') {
+      if (itemID.startsWith('vacuum_cleaner_')) {
+        this.bonus_equipment_manager.current_vacuum += 1;
+      } else if (itemID.startsWith('shift_layers_')) {
+        this.bonus_equipment_manager.shift_layers_up += 1;
+      }
+    }
+  }
+
   loadSaveData(saveJson) {
     try {
       // 1. Cash & Day
@@ -152,6 +185,46 @@ class GameState {
         }
       }
 
+      // 6. Shop Availability / Unlocked States overrides
+      const newUnlockedStates = {};
+      if (saveJson.Resources?.Items) {
+        const allItems = Array.from(items.values());
+        // Resources.Items could be an array or object in Godot, handle safely
+        const itemsList = Array.isArray(saveJson.Resources.Items) 
+          ? saveJson.Resources.Items 
+          : Object.values(saveJson.Resources.Items);
+
+        for (const slot of itemsList) {
+          if (slot.itemUnlocked !== undefined) {
+            // First try matching by itemID, fallback to itemPath
+            let foundItem = null;
+            if (slot.itemID) foundItem = allItems.find(i => i.itemID === slot.itemID);
+            if (!foundItem && slot.itemPath) foundItem = allItems.find(i => i.itemPath === slot.itemPath);
+            
+            if (foundItem) {
+              newUnlockedStates[foundItem.itemID] = slot.itemUnlocked;
+            }
+          }
+        }
+      }
+      this.itemUnlockedStates = newUnlockedStates;
+
+      // 7. Bonus Equipment Manager
+      if (saveJson.bonus_equipment_manager) {
+        this.bonus_equipment_manager.auto_loot_chests = !!saveJson.bonus_equipment_manager.auto_loot_chests;
+        this.bonus_equipment_manager.item_filter = !!saveJson.bonus_equipment_manager.item_filter;
+        this.bonus_equipment_manager.current_vacuum = saveJson.bonus_equipment_manager.current_vacuum || 0;
+        this.bonus_equipment_manager.shift_layers_up = saveJson.bonus_equipment_manager.shift_layers_up || 0;
+      } else {
+        // Reset defaults if no data is found
+        this.bonus_equipment_manager = {
+          auto_loot_chests: false,
+          item_filter: false,
+          current_vacuum: 0,
+          shift_layers_up: 0
+        };
+      }
+
       return true; // Success
     } catch (error) {
       console.error("Failed to parse save data:", error);
@@ -168,3 +241,4 @@ class GameState {
 }
 
 export const gameState = new GameState();
+
