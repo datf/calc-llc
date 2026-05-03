@@ -241,7 +241,7 @@
   }
 
   function getTimeToDestroyInfo(tile, dps, maxTime) {
-    if (dps === 0) return { text: "∞", color: "text-gray-600" };
+    if (dps === 0) return { text: "∞", color: "theme-text-muted" };
     
     const seconds = Number(tile.health) / dps;
 
@@ -250,59 +250,63 @@
     } else if (seconds > maxTime / 2) {
       return { text: `${seconds.toFixed(2)}s`, color: "text-orange-400" };
     } else {
-      return { text: `${seconds.toFixed(2)}s`, color: "text-coal-gold" };
+      return { text: `${seconds.toFixed(2)}s`, color: "theme-text-accent" };
     }
   }
 </script>
 
 <div class="max-w-screen-2xl mx-auto p-6">
   
-  <div class="mb-8">
-    <h2 class="text-4xl font-bold text-coal-gold font-sans tracking-tight">Strategy Calculator</h2>
-    <p class="text-gray-400 mt-2">Build setups and analyze your mining power against different blocks.</p>
+  <div class="mb-6 text-center">
+    <h2 class="text-3xl md:text-4xl font-bold theme-text-accent tracking-tight mb-2">
+      Strategy Calculator
+    </h2>
+    <p class="text-base theme-text-muted max-w-2xl mx-auto">
+      Build setups and analyze your mining power against different blocks.
+    </p>
   </div>
 
   <!-- TABS NAVIGATION -->
-  <div class="flex gap-2 mb-6 border-b border-gray-700 pb-px">
-    <button class="px-6 py-3 font-bold rounded-t-lg transition-colors {activeTab === 'power' ? 'bg-gray-800 text-coal-gold border-t border-l border-r border-gray-700' : 'bg-gray-900 text-gray-500 hover:text-white'}" onclick={() => activeTab = 'power'}>Current Power</button>
-    <button class="px-6 py-3 font-bold rounded-t-lg transition-colors {activeTab === 'suggestions' ? 'bg-gray-800 text-coal-gold border-t border-l border-r border-gray-700' : 'bg-gray-900 text-gray-500 hover:text-white'}" onclick={() => activeTab = 'suggestions'}>Proposed Upgrades</button>
+  <div class="flex gap-2 mb-6 border-b theme-border pb-px">
+    <button class="px-6 py-3 font-bold rounded-t-lg {activeTab === 'power' ? 'theme-surface theme-surface-hover theme-text-accent border-t border-l border-r theme-border' : 'theme-surface theme-text-muted hover:theme-text'}" onclick={() => activeTab = 'power'}>Current Power</button>
+    <button class="px-6 py-3 font-bold rounded-t-lg {activeTab === 'suggestions' ? 'theme-surface theme-surface-hover theme-text-accent border-t border-l border-r theme-border' : 'theme-surface theme-text-muted hover:theme-text'}" onclick={() => activeTab = 'suggestions'}>Proposed Upgrades</button>
   </div>
 
-  <div class="bg-gray-800 border border-gray-700 rounded-b-xl rounded-tr-xl p-6 shadow-2xl min-h-[60vh]">
+  <div class="theme-surface theme-surface-hover border theme-border rounded-b-xl rounded-tr-xl p-6 shadow-2xl min-h-[60vh]">
     
     {#if activeTab === 'power'}
       <!-- BUILDER UI -->
-      <div class="mb-8 bg-gray-900 border border-gray-700 rounded-xl overflow-hidden">
+      <div class="mb-8 theme-surface border theme-border rounded-xl overflow-hidden">
         
         <!-- Loadout Selectors -->
-        <div class="flex items-center gap-2 p-4 bg-black border-b border-gray-700 overflow-x-auto">
-          <span class="text-gray-400 font-bold uppercase tracking-wider text-sm mr-2 shrink-0">Loadouts:</span>
+        <div class="flex items-center gap-2 p-4 var(--bg-main) border-b theme-border overflow-x-auto">
+          <span class="theme-text-muted font-bold uppercase tracking-wider text-sm mr-2 shrink-0">Loadouts:</span>
           {#each gameState.calculatorLoadouts as loadout}
-            <div class="flex items-center bg-gray-800 rounded-lg border {gameState.calculatorActiveLoadoutId === loadout.id ? 'border-coal-gold shadow-[0_0_8px_rgba(255,215,0,0.2)]' : 'border-gray-700 opacity-70'}">
-              <button class="px-4 py-2 font-bold text-sm {gameState.calculatorActiveLoadoutId === loadout.id ? 'text-coal-gold' : 'text-gray-300'}" onclick={() => gameState.calculatorActiveLoadoutId = loadout.id}>
+            <div class="flex items-center theme-surface theme-surface-hover rounded-lg border {gameState.calculatorActiveLoadoutId === loadout.id ? 'theme-border-hover shadow-[0_0_8px_rgba(255,215,0,0.2)]' : 'theme-border opacity-70'}">
+              <button class="px-4 py-2 font-bold text-sm {gameState.calculatorActiveLoadoutId === loadout.id ? 'theme-text-accent' : 'theme-text'}" onclick={() => gameState.calculatorActiveLoadoutId = loadout.id}>
                 {loadout.name}
               </button>
               {#if gameState.calculatorLoadouts.length > 1}
-                <button class="px-2 py-2 text-gray-500 hover:text-red-400 transition-colors" onclick={() => removeLoadout(loadout.id)}>✕</button>
+                <button class="px-2 py-2 theme-text-muted hover:text-red-400" onclick={() => removeLoadout(loadout.id)}>✕</button>
               {/if}
             </div>
           {/each}
-          <button onclick={addLoadout} class="px-4 py-2 bg-gray-800 border border-gray-700 text-gray-400 hover:text-white rounded-lg font-bold transition-colors shrink-0">
+          <button onclick={addLoadout} class="px-4 py-2 theme-surface theme-surface-hover border theme-border theme-text-muted hover:theme-text rounded-lg font-bold shrink-0">
             + Add Loadout
           </button>
         </div>
 
         <!-- Inventory Palette -->
         <div class="p-6">
-          <p class="text-sm text-gray-400 mb-4">Click items to toggle them for <strong class="text-coal-gold">{activeLoadout.name}</strong>. Adjust quantities using the inputs.</p>
+          <p class="text-sm theme-text-muted mb-4">Click items to toggle them for <strong class="theme-text-accent">{activeLoadout.name}</strong>. Adjust quantities using the inputs.</p>
           
           <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <!-- Modifiers -->
-            <div class="p-4 bg-gray-800/50 rounded-lg border border-blue-900/50">
+            <div class="p-4 theme-surface theme-surface-hover/50 rounded-lg border border-blue-900/50">
               <h3 class="text-xs font-bold text-blue-400 mb-3 uppercase tracking-wider">Status Modifiers</h3>
               <div class="flex flex-wrap gap-2">
                 {#each sources.modifiers as source}
-                  <div role="button" tabindex="0" onclick={() => toggleItemInLoadout(source)} onkeydown={(e) => e.key === 'Enter' && toggleItemInLoadout(source)} class="flex items-center gap-2 px-2 py-1.5 rounded border transition-all cursor-pointer select-none {isSourceActive(source) ? 'bg-blue-900/40 border-blue-400' : 'bg-black border-gray-700 opacity-60 hover:opacity-100'}">
+                  <div role="button" tabindex="0" onclick={() => toggleItemInLoadout(source)} onkeydown={(e) => e.key === 'Enter' && toggleItemInLoadout(source)} class="flex items-center gap-2 px-2 py-1.5 rounded border cursor-pointer select-none {isSourceActive(source) ? 'bg-blue-900/40 border-blue-400' : 'var(--bg-main) theme-border opacity-60 hover:opacity-100'}">
                     {#if source.pics}
                       <div class="relative w-5 h-5">
                         {#each source.pics as picBase64}
@@ -311,19 +315,19 @@
                       </div>
                     {/if}
                     <div class="flex flex-col text-left">
-                      <span class="text-xs font-bold {isSourceActive(source) ? 'text-white' : 'text-gray-400'}">{source.name}</span>
+                      <span class="text-xs font-bold {isSourceActive(source) ? 'theme-text' : 'theme-text-muted'}">{source.name}</span>
                       {#if isSourceActive(source)}
                         {@const activeRef = activeLoadout.modifiers.find(s => s.id === source.id)}
                         {#if source.isStackable}
                           <div class="mt-0.5 flex items-center gap-1" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
-                            <input type="number" min="1" max={source.maxCount} bind:value={activeRef.activeCount} class="w-14 text-xs px-1 py-0.5 rounded bg-black text-white border border-gray-500 focus:border-coal-gold outline-none" />
-                            <span class="text-[9px] text-gray-400">/ {formatLargeNumber(source.ownedCount)}</span>
+                            <input type="number" min="1" max={source.maxCount} bind:value={activeRef.activeCount} class="w-14 text-xs px-1 py-0.5 rounded var(--bg-main) theme-text border theme-border focus:theme-border-hover outline-none" />
+                            <span class="text-[9px] theme-text-muted">/ {formatLargeNumber(source.ownedCount)}</span>
                           </div>
                         {:else}
                           <span class="text-[9px] text-blue-300 mt-0.5 font-semibold">Active (Max 1)</span>
                         {/if}
                       {:else}
-                        <span class="text-[9px] text-gray-500">Owned: {formatLargeNumber(source.ownedCount)}</span>
+                        <span class="text-[9px] theme-text-muted">Owned: {formatLargeNumber(source.ownedCount)}</span>
                       {/if}
                     </div>
                   </div>
@@ -332,11 +336,11 @@
             </div>
 
             <!-- Independents -->
-            <div class="p-4 bg-gray-800/50 rounded-lg border border-green-900/50 xl:col-span-2">
+            <div class="p-4 theme-surface theme-surface-hover/50 rounded-lg border border-green-900/50 xl:col-span-2">
               <h3 class="text-xs font-bold text-green-400 mb-3 uppercase tracking-wider">Background DPS</h3>
               <div class="flex flex-wrap gap-2">
                 {#each sources.independentSources as source}
-                  <div role="button" tabindex="0" onclick={() => toggleItemInLoadout(source)} onkeydown={(e) => e.key === 'Enter' && toggleItemInLoadout(source)} class="flex items-center gap-2 px-2 py-1.5 rounded border transition-all cursor-pointer select-none {isSourceActive(source) ? 'bg-green-900/40 border-green-400' : 'bg-black border-gray-700 opacity-60 hover:opacity-100'}">
+                  <div role="button" tabindex="0" onclick={() => toggleItemInLoadout(source)} onkeydown={(e) => e.key === 'Enter' && toggleItemInLoadout(source)} class="flex items-center gap-2 px-2 py-1.5 rounded border cursor-pointer select-none {isSourceActive(source) ? 'bg-green-900/40 border-green-400' : 'var(--bg-main) theme-border opacity-60 hover:opacity-100'}">
                     {#if source.pics}
                       <div class="relative w-5 h-5">
                         {#each source.pics as picBase64}
@@ -345,19 +349,19 @@
                       </div>
                     {/if}
                     <div class="flex flex-col text-left">
-                      <span class="text-xs font-bold {isSourceActive(source) ? 'text-white' : 'text-gray-400'}">{source.name}</span>
+                      <span class="text-xs font-bold {isSourceActive(source) ? 'theme-text' : 'theme-text-muted'}">{source.name}</span>
                       {#if isSourceActive(source)}
                         {@const activeRef = activeLoadout.independents.find(s => s.id === source.id)}
                         {#if source.isStackable}
                           <div class="mt-0.5 flex items-center gap-1" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
-                            <input type="number" min="1" max={source.maxCount} bind:value={activeRef.activeCount} class="w-14 text-xs px-1 py-0.5 rounded bg-black text-white border border-gray-500 focus:border-coal-gold outline-none" />
-                            <span class="text-[9px] text-gray-400">/ {formatLargeNumber(source.ownedCount)}</span>
+                            <input type="number" min="1" max={source.maxCount} bind:value={activeRef.activeCount} class="w-14 text-xs px-1 py-0.5 rounded var(--bg-main) theme-text border theme-border focus:theme-border-hover outline-none" />
+                            <span class="text-[9px] theme-text-muted">/ {formatLargeNumber(source.ownedCount)}</span>
                           </div>
                         {:else}
                           <span class="text-[9px] text-green-300 mt-0.5 font-semibold">Active (Max 1)</span>
                         {/if}
                       {:else}
-                        <span class="text-[9px] text-gray-500">Owned: {formatLargeNumber(source.ownedCount)}</span>
+                        <span class="text-[9px] theme-text-muted">Owned: {formatLargeNumber(source.ownedCount)}</span>
                       {/if}
                     </div>
                   </div>
@@ -366,11 +370,11 @@
             </div>
 
             <!-- Held Weapons -->
-            <div class="p-4 bg-gray-800/50 rounded-lg border border-coal-gold/30 xl:col-span-3">
-              <h3 class="text-xs font-bold text-coal-gold mb-3 uppercase tracking-wider">Held Weapon (Max 1)</h3>
+            <div class="p-4 theme-surface theme-surface-hover/50 rounded-lg border theme-border-hover/30 xl:col-span-3">
+              <h3 class="text-xs font-bold theme-text-accent mb-3 uppercase tracking-wider">Held Weapon (Max 1)</h3>
               <div class="flex flex-wrap gap-2">
                 {#each sources.heldWeapons as source}
-                  <div role="button" tabindex="0" onclick={() => toggleItemInLoadout(source)} onkeydown={(e) => e.key === 'Enter' && toggleItemInLoadout(source)} class="flex items-center gap-2 px-2 py-1.5 rounded border transition-all cursor-pointer select-none {isSourceActive(source) ? 'bg-yellow-900/30 border-coal-gold shadow-[0_0_8px_rgba(255,215,0,0.3)]' : 'bg-black border-gray-700 opacity-60 hover:opacity-100'}">
+                  <div role="button" tabindex="0" onclick={() => toggleItemInLoadout(source)} onkeydown={(e) => e.key === 'Enter' && toggleItemInLoadout(source)} class="flex items-center gap-2 px-2 py-1.5 rounded border cursor-pointer select-none {isSourceActive(source) ? 'bg-yellow-900/30 theme-border-hover shadow-[0_0_8px_rgba(255,215,0,0.3)]' : 'var(--bg-main) theme-border opacity-60 hover:opacity-100'}">
                     {#if source.pics}
                       <div class="relative w-5 h-5">
                         {#each source.pics as picBase64}
@@ -379,8 +383,8 @@
                       </div>
                     {/if}
                     <div class="flex flex-col text-left">
-                      <span class="text-xs font-bold {isSourceActive(source) ? 'text-white' : 'text-gray-400'}">{source.name}</span>
-                      <span class="text-[9px] text-gray-500">Owned: {formatLargeNumber(source.ownedCount)}</span>
+                      <span class="text-xs font-bold {isSourceActive(source) ? 'theme-text' : 'theme-text-muted'}">{source.name}</span>
+                      <span class="text-[9px] theme-text-muted">Owned: {formatLargeNumber(source.ownedCount)}</span>
                     </div>
                   </div>
                 {/each}
@@ -388,18 +392,18 @@
             </div>
 
             <!-- Passives Summary -->
-            <div class="p-4 bg-gray-800/50 rounded-lg border border-purple-900/50 xl:col-span-3">
+            <div class="p-4 theme-surface theme-surface-hover/50 rounded-lg border border-purple-900/50 xl:col-span-3">
               <h3 class="text-xs font-bold text-purple-400 mb-3 uppercase tracking-wider">Active Passives Summary</h3>
               <div class="flex flex-wrap gap-2">
                 {#each nonZeroPassives as passive}
                   {@const isActive = activePassiveKeys.has(passive.key)}
-                  <div class="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono border transition-colors {isActive ? 'bg-purple-900/40 border-purple-400 text-white shadow-[0_0_8px_rgba(168,85,247,0.2)]' : 'bg-black border-gray-700 text-gray-500 opacity-60'}">
+                  <div class="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono border {isActive ? 'bg-purple-900/40 border-purple-400 theme-text shadow-[0_0_8px_rgba(168,85,247,0.2)]' : 'var(--bg-main) theme-border theme-text-muted opacity-60'}">
                     <span class="uppercase">{passive.name}:</span>
-                    <span class="font-bold {isActive ? 'text-coal-gold' : ''}">+{Math.round(passive.value * 100)}%</span>
+                    <span class="font-bold {isActive ? 'theme-text-accent' : ''}">+{Math.round(passive.value * 100)}%</span>
                   </div>
                 {/each}
                 {#if nonZeroPassives.length === 0}
-                  <span class="text-xs text-gray-500 italic">No passives upgraded yet.</span>
+                  <span class="text-xs theme-text-muted italic">No passives upgraded yet.</span>
                 {/if}
               </div>
             </div>
@@ -409,16 +413,16 @@
       </div>
 
       <!-- TABLE FILTERS -->
-      <div class="mb-4 bg-gray-900 border border-gray-700 rounded-xl p-4">
+      <div class="mb-4 theme-surface border theme-border rounded-xl p-4">
         
         <!-- Layer Filter -->
         <div class="mb-4">
-          <h3 class="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wider">Filter by Layer</h3>
+          <h3 class="text-xs font-bold theme-text-muted mb-2 uppercase tracking-wider">Filter by Layer</h3>
           <div class="flex flex-wrap gap-2">
             {#each layerOptions as layer}
               <button 
                 onclick={() => toggleLayerFilter(layer.name)}
-                class="flex items-center gap-1.5 px-2 py-1 rounded border transition-all text-xs font-bold select-none {gameState.calculatorHiddenLayers.includes(layer.name) ? 'bg-black border-gray-700 text-gray-600 opacity-50' : 'bg-gray-800 border-gray-500 text-white hover:bg-gray-700 hover:border-gray-400'}"
+                class="flex items-center gap-1.5 px-2 py-1 rounded border text-xs font-bold select-none {gameState.calculatorHiddenLayers.includes(layer.name) ? 'var(--bg-main) theme-border theme-text-muted opacity-50' : 'theme-surface theme-surface-hover theme-border theme-text hover:var(--border-main) hover:border-gray-400'}"
               >
                 {#if layer.pic}
                   <img src={layer.pic} alt={layer.name} class="w-4 h-4 rendering-pixelated object-contain" />
@@ -431,12 +435,12 @@
 
         <!-- Material Filter -->
         <div>
-          <h3 class="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wider">Filter by Material</h3>
+          <h3 class="text-xs font-bold theme-text-muted mb-2 uppercase tracking-wider">Filter by Material</h3>
           <div class="flex flex-wrap gap-2">
             {#each materialOptions as mat}
               <button 
                 onclick={() => toggleMaterialFilter(mat.name)}
-                class="flex items-center gap-1.5 px-2 py-1 rounded border transition-all text-xs font-bold select-none {gameState.calculatorHiddenMaterials.includes(mat.name) ? 'bg-black border-gray-700 text-gray-600 opacity-50' : 'bg-gray-800 border-gray-500 text-white hover:bg-gray-700 hover:border-gray-400'}"
+                class="flex items-center gap-1.5 px-2 py-1 rounded border text-xs font-bold select-none {gameState.calculatorHiddenMaterials.includes(mat.name) ? 'var(--bg-main) theme-border theme-text-muted opacity-50' : 'theme-surface theme-surface-hover theme-border theme-text hover:var(--border-main) hover:border-gray-400'}"
               >
                 {#if mat.pic}
                   <img src={mat.pic} alt={mat.name} class="w-4 h-4 rendering-pixelated object-contain" />
@@ -450,28 +454,28 @@
       </div>
 
       <!-- INVERTED DATA TABLE (Rows = Loadouts, Cols = Tiles) -->
-      <div class="overflow-x-auto rounded-lg border border-gray-700">
+      <div class="overflow-x-auto rounded-lg border theme-border">
         <table class="w-full text-left border-collapse">
           <thead>
-            <tr class="bg-gray-900 text-white text-sm uppercase tracking-wider">
-              <th class="p-4 border-b border-r border-gray-700 min-w-[280px] sticky left-0 bg-gray-900 z-20 shadow-[2px_0_5px_rgba(0,0,0,0.3)]">Loadout</th>
+            <tr class="theme-surface theme-text text-sm uppercase tracking-wider">
+              <th class="p-4 border-b border-r theme-border min-w-[280px] sticky left-0 theme-surface z-20 shadow-[2px_0_5px_rgba(0,0,0,0.3)]">Loadout</th>
               
               {#each filteredTiles as tile}
-                <th class="p-4 border-b border-gray-700 min-w-[120px]">
+                <th class="p-4 border-b theme-border min-w-[120px]">
                   <div class="flex items-center gap-2">
                     {#if tile.pics_in_rock_base64 && tile.pics_in_rock_base64.length > 0}
                       <img src={tile.pics_in_rock_base64[0]} alt={tile.resource} class="w-6 h-6 rendering-pixelated object-contain" />
                     {/if}
                     <div>
                       <div class="font-bold leading-tight capitalize">{tile.resource}</div>
-                      <div class="text-[10px] text-gray-400 leading-tight capitalize">{tile.layer}</div>
+                      <div class="text-[10px] theme-text-muted leading-tight capitalize">{tile.layer}</div>
                     </div>
                   </div>
                 </th>
               {/each}
 
               {#if filteredTiles.length === 0}
-                <th class="p-4 border-b border-gray-700 text-gray-500 italic font-normal">No tiles match current filters.</th>
+                <th class="p-4 border-b theme-border theme-text-muted italic font-normal">No tiles match current filters.</th>
               {/if}
             </tr>
           </thead>
@@ -481,19 +485,19 @@
               {@const maxTime = gameState.secondsPerRound || 300}
               {@const isEditing = gameState.calculatorActiveLoadoutId === loadout.id}
               
-              <tr class="hover:bg-gray-700/50 transition-colors {isEditing ? 'bg-gray-800/80' : ''}">
+              <tr class="hover:var(--border-main)/50 {isEditing ? 'theme-surface theme-surface-hover/80' : ''}">
                 
                 <!-- Loadout Info (Sticky Left) -->
-                <td class="p-4 border-r border-gray-700 sticky left-0 bg-gray-800 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.3)]">
+                <td class="p-4 border-r theme-border sticky left-0 theme-surface theme-surface-hover z-10 shadow-[2px_0_5px_rgba(0,0,0,0.3)]">
                   <div class="flex justify-between items-start mb-2">
                     <button 
-                      class="font-bold flex items-center gap-2 transition-colors focus:outline-none {isEditing ? 'text-coal-gold' : 'text-white hover:text-gray-300'}"
+                      class="font-bold flex items-center gap-2 focus:outline-none {isEditing ? 'theme-text-accent' : 'theme-text hover:theme-text'}"
                       onclick={() => gameState.calculatorActiveLoadoutId = loadout.id}
                       title="Click to edit this loadout"
                     >
                       {loadout.name}
                     </button>
-                    <div class="text-xs font-mono text-gray-300 bg-gray-900 border border-gray-700 px-2 py-1 rounded">
+                    <div class="text-xs font-mono theme-text theme-surface border theme-border px-2 py-1 rounded">
                       {formatDPS(rowDPS)}
                     </div>
                   </div>
@@ -501,7 +505,7 @@
                   <!-- Mini icons of the loadout contents -->
                   <div class="flex flex-wrap gap-2 pt-1">
                     {#if loadout.heldWeapon}
-                      <div class="relative w-6 h-6 border border-coal-gold bg-black rounded" title={loadout.heldWeapon.name}>
+                      <div class="relative w-6 h-6 border theme-border-hover var(--bg-main) rounded" title={loadout.heldWeapon.name}>
                         {#each loadout.heldWeapon.pics as pic}
                           <img src={pic} alt="wep" class="absolute inset-0 w-full h-full object-contain rendering-pixelated" />
                         {/each}
@@ -509,29 +513,29 @@
                     {/if}
                     
                     {#each loadout.modifiers as mod}
-                      <div class="relative w-6 h-6 border border-blue-500 bg-black rounded" title={mod.name}>
+                      <div class="relative w-6 h-6 border border-blue-500 var(--bg-main) rounded" title={mod.name}>
                         {#each mod.pics as pic}
                           <img src={pic} alt="mod" class="absolute inset-0 w-full h-full object-contain rendering-pixelated" />
                         {/each}
                         {#if mod.activeCount > 1}
-                          <span class="absolute -bottom-2 -right-2 bg-gray-900 text-white text-[9px] font-bold px-1 rounded-full border border-gray-700">x{formatLargeNumber(mod.activeCount)}</span>
+                          <span class="absolute -bottom-2 -right-2 theme-surface theme-text text-[9px] font-bold px-1 rounded-full border theme-border">x{formatLargeNumber(mod.activeCount)}</span>
                         {/if}
                       </div>
                     {/each}
 
                     {#each loadout.independents as ind}
-                      <div class="relative w-6 h-6 border border-green-500 bg-black rounded" title={ind.name}>
+                      <div class="relative w-6 h-6 border border-green-500 var(--bg-main) rounded" title={ind.name}>
                         {#each ind.pics as pic}
                           <img src={pic} alt="ind" class="absolute inset-0 w-full h-full object-contain rendering-pixelated" />
                         {/each}
                         {#if ind.activeCount > 1}
-                          <span class="absolute -bottom-2 -right-2 bg-gray-900 text-white text-[9px] font-bold px-1 rounded-full border border-gray-700">x{formatLargeNumber(ind.activeCount)}</span>
+                          <span class="absolute -bottom-2 -right-2 theme-surface theme-text text-[9px] font-bold px-1 rounded-full border theme-border">x{formatLargeNumber(ind.activeCount)}</span>
                         {/if}
                       </div>
                     {/each}
 
                     {#if !loadout.heldWeapon && loadout.modifiers.length===0 && loadout.independents.length===0}
-                      <span class="text-xs text-gray-500 italic mt-1">Empty Loadout</span>
+                      <span class="text-xs theme-text-muted italic mt-1">Empty Loadout</span>
                     {/if}
                   </div>
                 </td>
@@ -539,14 +543,14 @@
                 <!-- Tile Calculations -->
                 {#each filteredTiles as tile}
                   {@const ttk = getTimeToDestroyInfo(tile, rowDPS, maxTime)}
-                  <td class="p-4 align-middle border-r border-gray-700 last:border-r-0 text-center">
+                  <td class="p-4 align-middle border-r theme-border last:border-r-0 text-center">
                     <div class="relative group cursor-help inline-block w-full">
                       <div class="font-mono font-bold {ttk.color} text-base">{ttk.text}</div>
                       
                       <!-- Yield Tooltip -->
-                      <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center bg-gray-900 border border-gray-600 px-3 py-2 rounded shadow-[0_0_10px_rgba(0,0,0,0.5)] z-50 whitespace-nowrap pointer-events-none">
-                        <span class="text-[9px] text-gray-400 uppercase tracking-wider mb-1">Yield / Block</span>
-                        <span class="font-mono text-coal-gold font-bold text-sm">
+                      <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center theme-surface border theme-border px-3 py-2 rounded shadow-[0_0_10px_rgba(0,0,0,0.5)] z-50 whitespace-nowrap pointer-events-none">
+                        <span class="text-[9px] theme-text-muted uppercase tracking-wider mb-1">Yield / Block</span>
+                        <span class="font-mono theme-text-accent font-bold text-sm">
                           {#if tile.min_drop === tile.max_drop}
                             {formatLargeNumber(tile.min_drop)}
                           {:else}
@@ -561,7 +565,7 @@
                 {/each}
                 
                 {#if filteredTiles.length === 0}
-                  <td class="p-4 bg-gray-900/50"></td>
+                  <td class="p-4 theme-surface/50"></td>
                 {/if}
 
               </tr>
@@ -573,8 +577,8 @@
     {:else}
       <!-- PROPOSED UPGRADES TAB -->
       <div class="text-center py-20">
-        <h3 class="text-2xl font-bold text-gray-400 mb-2">Algorithm processing...</h3>
-        <p class="text-gray-500">Upgrade suggestions logic will go here!</p>
+        <h3 class="text-2xl font-bold theme-text-muted mb-2">Algorithm processing...</h3>
+        <p class="theme-text-muted">Upgrade suggestions logic will go here!</p>
       </div>
     {/if}
 

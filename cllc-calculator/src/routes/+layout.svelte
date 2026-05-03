@@ -2,6 +2,11 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import '../app.css';
 	import { gameState, GAME_OPTIONS } from '$lib/game.svelte.js';
+	let theme = $state('dark');
+	function toggleTheme() {
+		theme = theme === 'dark' ? 'light' : 'dark';
+		document.documentElement.className = theme;
+	}
 
 	// UI States
 	let isEditingCash = $state(false);
@@ -84,7 +89,7 @@ function handleEnter(event) {
 
   <div class="shrink-0 shadow-2xl z-50">
 
-<header class="bg-coal-dark text-coal-gold p-4 border-b-2 border-gray-700 flex justify-between text-sm sm:text-base">
+<header class="bg-transparent theme-text-accent p-4 border-b-2 theme-border flex justify-between text-sm sm:text-base">
   
   <!-- Left Column -->
   <div class="flex flex-col gap-2">
@@ -96,11 +101,11 @@ function handleEnter(event) {
           bind:value={rawCashInput} 
           onblur={saveCash}
           onkeydown={handleEnter}
-          class="w-24 bg-gray-800 text-white border border-coal-gold rounded px-1 outline-none"
+          class="w-24 theme-surface theme-text border theme-border-hover rounded px-1 outline-none"
           autofocus
         />
       {:else}
-        <button onclick={startEditingCash} class="font-bold underline cursor-pointer hover:text-white px-1">
+        <button onclick={startEditingCash} class="font-bold underline cursor-pointer hover:theme-text px-1">
           {formattedCash}
         </button>
       {/if}
@@ -116,16 +121,23 @@ function handleEnter(event) {
           oninput={handleDayInput}
           onblur={() => isEditingDay = false}
           onkeydown={handleEnter}
-          class="w-16 bg-gray-800 text-white border border-coal-gold rounded px-1 outline-none"
+          class="w-16 theme-surface theme-text border theme-border-hover rounded px-1 outline-none"
           autofocus
         />
       {:else}
-        <button onclick={() => isEditingDay = true} class="font-bold underline cursor-pointer hover:text-white px-1">
+        <button onclick={() => isEditingDay = true} class="font-bold underline cursor-pointer hover:theme-text px-1">
           {gameState.day}
         </button>
       {/if}
       - upcoming coal quota: {formattedQuota}
     </div>
+<button 
+  class="px-3 py-1 border theme-border rounded theme-surface-hover theme-text-muted" 
+  onclick={toggleTheme}
+>
+  {theme === "dark" ? "☀️ Light" : "🌑 Dark"}
+</button>
+
   </div>
 
   <!-- Right Column -->
@@ -137,7 +149,7 @@ function handleEnter(event) {
       bind:value={gameState.professionId} 
       onblur={() => isEditingProfession = false}
       onchange={() => isEditingProfession = false}
-      class="bg-gray-800 text-white border border-coal-gold rounded px-1 outline-none cursor-pointer"
+      class="theme-surface theme-text border theme-border-hover rounded px-1 outline-none cursor-pointer"
       autofocus
     >
       {#each GAME_OPTIONS.professions as option}
@@ -146,7 +158,7 @@ function handleEnter(event) {
     </select>
   {:else}
     <!-- Look up the matching name for the current professionId to display -->
-    <button onclick={() => isEditingProfession = true} class="text-white hover:underline cursor-pointer">
+    <button onclick={() => isEditingProfession = true} class="theme-text hover:underline cursor-pointer">
       {GAME_OPTIONS.professions.find(p => p.profession_id === gameState.professionId)?.profession_name || gameState.professionId}
     </button>
   {/if}
@@ -158,7 +170,7 @@ function handleEnter(event) {
           bind:value={gameState.map} 
           onblur={() => isEditingMap = false}
           onchange={() => isEditingMap = false}
-          class="bg-gray-800 text-white border border-coal-gold rounded px-1 outline-none cursor-pointer"
+          class="theme-surface theme-text border theme-border-hover rounded px-1 outline-none cursor-pointer"
           autofocus
         >
           {#each GAME_OPTIONS.maps as option}
@@ -166,7 +178,7 @@ function handleEnter(event) {
           {/each}
         </select>
       {:else}
-        <button onclick={() => isEditingMap = true} class="text-white hover:underline cursor-pointer">
+        <button onclick={() => isEditingMap = true} class="theme-text hover:underline cursor-pointer">
           {gameState.map}
         </button>
       {/if}
@@ -178,7 +190,7 @@ function handleEnter(event) {
           bind:value={gameState.mode} 
           onblur={() => isEditingMode = false}
           onchange={() => isEditingMode = false}
-          class="bg-gray-800 text-white border border-coal-gold rounded px-1 outline-none cursor-pointer"
+          class="theme-surface theme-text border theme-border-hover rounded px-1 outline-none cursor-pointer"
           autofocus
         >
           {#each GAME_OPTIONS.modes as option}
@@ -186,7 +198,7 @@ function handleEnter(event) {
           {/each}
         </select>
       {:else}
-        <button onclick={() => isEditingMode = true} class="text-white hover:underline cursor-pointer">
+        <button onclick={() => isEditingMode = true} class="theme-text hover:underline cursor-pointer">
           {gameState.mode}
         </button>
       {/if}
@@ -199,7 +211,7 @@ function handleEnter(event) {
               bind:value={gameState.secondsPerRound} 
               onblur={() => isEditingTime = false}
               onchange={() => isEditingTime = false}
-              class="bg-gray-800 text-white border border-coal-gold rounded px-1 outline-none cursor-pointer"
+              class="theme-surface theme-text border theme-border-hover rounded px-1 outline-none cursor-pointer"
               autofocus
             >
               {#each GAME_OPTIONS.roundTimes as option}
@@ -207,7 +219,7 @@ function handleEnter(event) {
               {/each}
             </select>
           {:else}
-            <button onclick={() => isEditingTime = true} class="text-white hover:underline cursor-pointer">
+            <button onclick={() => isEditingTime = true} class="theme-text hover:underline cursor-pointer">
               {gameState.secondsPerRound}s
             </button>
           {/if}
@@ -217,13 +229,13 @@ function handleEnter(event) {
 </header>
 
 
-<nav class="flex gap-4 p-4 bg-gray-900 border-b border-coal-gold">
-  <a href="#/" class="text-coal-gold hover:text-white transition">Welcome</a>
-  <a href="#/character" class="text-coal-gold hover:text-white transition">Character Setup</a>
-  <a href="#/employees" class="text-coal-gold hover:text-white transition">Employees</a>
-  <a href="#/equipment" class="text-coal-gold hover:text-white transition">Equipment</a>
-  <a href="#/passives" class="text-coal-gold hover:text-white transition">Passives</a>
-  <a href="#/calculator" class="text-coal-gold hover:text-white transition">Calculator</a>
+<nav class="flex gap-4 p-4 theme-surface border-b theme-border-hover">
+  <a href="#/" class="theme-text-accent hover:theme-text transition">Welcome</a>
+  <a href="#/character" class="theme-text-accent hover:theme-text transition">Character Setup</a>
+  <a href="#/employees" class="theme-text-accent hover:theme-text transition">Employees</a>
+  <a href="#/equipment" class="theme-text-accent hover:theme-text transition">Equipment</a>
+  <a href="#/passives" class="theme-text-accent hover:theme-text transition">Passives</a>
+  <a href="#/calculator" class="theme-text-accent hover:theme-text transition">Calculator</a>
 </nav>
 </div>
 

@@ -1,4 +1,3 @@
-<!-- src/routes/+page.svelte -->
 <script>
   import { gameState } from '$lib/game.svelte.js'; // Import your singleton instance
   import { goto } from '$app/navigation';
@@ -39,14 +38,14 @@
 
 <div class="flex flex-col items-center justify-center min-h-[70vh] p-6 text-center">
   <div class="mb-10">
-    <h1 class="text-5xl font-bold text-coal-gold mb-4 tracking-tight">Coal LLC</h1>
-    <p class="text-lg text-gray-400 max-w-xl mx-auto">
+    <h1 class="text-5xl font-bold theme-text-accent mb-4 tracking-tight">Coal LLC</h1>
+    <p class="text-lg theme-text-muted max-w-xl mx-auto">
       Upload your management save file to resume expanding your corporate mining empire.
     </p>
   </div>
 
-  <div class="bg-gray-800 p-8 rounded-xl shadow-2xl border border-gray-700 w-full max-w-md">
-    <label for="save-upload" class="block text-xl font-bold text-white mb-6">
+  <div class="theme-surface p-8 rounded-xl shadow-2xl border theme-border w-full max-w-md">
+    <label for="save-upload" class="block text-xl font-bold theme-text mb-6">
       Load Save File
     </label>
     
@@ -54,21 +53,20 @@
       id="save-upload"
       type="file"
       accept=".json,.txt,.save"
-      class="block w-full text-sm text-gray-400
+      class="block w-full text-sm theme-text-muted
         file:mr-4 file:py-3 file:px-6
         file:rounded-lg file:border-0
         file:text-sm file:font-bold
-        file:bg-coal-gold file:text-gray-900
-        hover:file:bg-yellow-500 cursor-pointer transition-colors"
+        file:bg-[var(--accent)] file:text-[var(--bg-main)]
+        hover:file:brightness-110 cursor-pointer transition-all"
       onchange={handleFileUpload}
       bind:this={fileInput}
     />
     
     {#if errorMessage}
-      <div class="mt-6 p-4 bg-red-900/50 border border-red-500 rounded text-red-200 text-sm">
+      <div class="mt-6 p-4 bg-red-500/10 border border-red-500 rounded text-red-500 text-sm">
         {errorMessage}
       </div>
     {/if}
   </div>
 </div>
-

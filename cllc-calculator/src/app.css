@@ -1,17 +1,54 @@
 @import "tailwindcss";
 
-/* You can define your Coal LLC custom colors or themes right here using CSS variables */
 @theme {
   --color-coal-dark: #1a1a1a;
   --color-coal-gold: #ffd700;
   --font-game: 'Courier New', Courier, monospace;
 }
-/* ADD THIS LINE */
-html {
-  scroll-padding-top: 140px; 
+
+:root {
+  --bg-main: #1a1a1a;
+  --bg-surface: #2a2a2a;
+  --text-main: #ffffff;
+  --text-muted: #9ca3af;
+  --border-main: #374151; /* gray-700 */
+  --accent: #ffd700;
+}
+
+html.light {
+  --bg-main: #f3f4f6;
+  --bg-surface: #ffffff;
+  --text-main: #111827;
+  --text-muted: #4b5563;
+  --border-main: #d1d5db;
+  --accent: #d97706; /* darker gold/amber for light mode readability */
 }
 
 body {
-  @apply bg-coal-dark text-white font-game;
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  font-family: var(--font-game);
+  
 }
 
+.theme-surface { background-color: var(--bg-surface); }
+.theme-surface-hover:hover { filter: brightness(1.2); }
+.light .theme-surface-hover:hover { filter: brightness(0.95); }
+
+.theme-text { color: var(--text-main); }
+.theme-text-muted { color: var(--text-muted); }
+.theme-text-accent { color: var(--accent); }
+
+.theme-border { border-color: var(--border-main); }
+.theme-border-focus:focus { border-color: var(--accent); outline: none; }
+.theme-border-hover:hover { border-color: var(--accent); }
+
+.theme-input {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  border: 1px solid var(--border-main);
+}
+
+.theme-input::placeholder {
+  color: var(--text-muted);
+}

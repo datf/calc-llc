@@ -26,19 +26,22 @@
 </script>
 
 <div class="max-w-5xl mx-auto p-6">
-  <div class="mb-10 text-center">
-    <h2 class="text-4xl font-bold text-coal-gold mb-2 font-sans">Passive Effects</h2>
-    <p class="text-gray-400">
+  <div class="mb-6 text-center">
+    <h2 class="text-3xl md:text-4xl font-bold theme-text-accent tracking-tight mb-2">
+      Passive Effects
+    </h2>
+
+    <p class="text-base theme-text-muted max-w-2xl mx-auto">
       Adjust your global multipliers as percentages (e.g., 100 = +100%).
     </p>
   </div>
 
-  <div class="bg-gray-800 border border-gray-700 rounded-xl p-6 shadow-2xl">
+  <div class="theme-surface theme-surface-hover border theme-border rounded-xl p-6 shadow-2xl">
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       
       {#each PASSIVE_KEYS as key}
-        <div class="bg-gray-900 border border-gray-700 rounded-lg p-4 flex flex-col justify-center h-24">
-          <label for={key} class="block text-sm font-bold text-white mb-2">
+        <div class="theme-surface border theme-border rounded-lg p-4 flex flex-col justify-center h-24">
+          <label for={key} class="block text-sm font-bold theme-text mb-2">
             {formatLabel(key)}
           </label>
           
@@ -49,9 +52,9 @@
               step={getDisplayPercent(passivesInfo[key])} 
               value={getDisplayPercent(gameState.passives[key])}
               oninput={(e) => handleInput(key, e)}
-              class="w-full bg-black border border-gray-600 text-white p-2 rounded focus:border-coal-gold focus:outline-none focus:ring-1 focus:ring-coal-gold font-mono"
+              class="w-full theme-surface border theme-border theme-text p-2 rounded theme-border-focus focus:outline-none focus:ring-1 focus:ring-coal-gold font-mono"
             />
-            <span class="text-coal-gold font-bold text-lg">%</span>
+            <span class="theme-text-accent font-bold text-lg">%</span>
           </div>
         </div>
       {/each}
