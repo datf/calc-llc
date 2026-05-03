@@ -36,7 +36,7 @@
   }
 </script>
 
-<div class="flex flex-col items-center justify-center min-h-[70vh] p-6 text-center">
+<div class="page-wrapper page-narrow flex flex-col items-center justify-center min-h-[70vh] text-center">
   <div class="mb-10">
     <h1 class="text-5xl font-bold theme-text-accent mb-4 tracking-tight">Coal LLC</h1>
     <p class="text-lg theme-text-muted max-w-xl mx-auto">

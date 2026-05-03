@@ -25,7 +25,7 @@
   }
 </script>
 
-<div class="max-w-5xl mx-auto p-6">
+<div class="page-wrapper page-wide">
   <div class="mb-6 text-center">
     <h2 class="text-3xl md:text-4xl font-bold theme-text-accent tracking-tight mb-2">
       Passive Effects
@@ -36,30 +36,28 @@
     </p>
   </div>
 
-  <div class="theme-surface theme-surface-hover border theme-border rounded-xl p-6 shadow-2xl">
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      
-      {#each PASSIVE_KEYS as key}
-        <div class="theme-surface theme-border border rounded-lg p-4 flex flex-col justify-center h-24">
-          <label for={key} class="block text-sm font-bold theme-text mb-2">
-            {formatLabel(key)}
-          </label>
-          
-          <div class="flex items-center gap-2">
-            <input 
-              id={key}
-              type="number" 
-              step={getDisplayPercent(passivesInfo[key])} 
-              value={getDisplayPercent(gameState.passives[key])}
-              oninput={(e) => handleInput(key, e)}
-              class="w-full theme-input p-2 rounded theme-border-focus font-mono"
-            />
-            <span class="theme-text-accent font-bold text-lg">%</span>
-          </div>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    
+    {#each PASSIVE_KEYS as key}
+      <div class="theme-surface theme-border border rounded-lg p-4 flex flex-col justify-center h-24">
+        <label for={key} class="block text-sm font-bold theme-text mb-2">
+          {formatLabel(key)}
+        </label>
+        
+        <div class="flex items-center gap-2">
+          <input 
+            id={key}
+            type="number" 
+            step={getDisplayPercent(passivesInfo[key])} 
+            value={getDisplayPercent(gameState.passives[key])}
+            oninput={(e) => handleInput(key, e)}
+            class="w-full theme-input p-2 rounded theme-border-focus font-mono"
+          />
+          <span class="theme-text-accent font-bold text-lg">%</span>
         </div>
-      {/each}
+      </div>
+    {/each}
 
-    </div>
   </div>
 </div>
 

@@ -255,7 +255,7 @@
   }
 </script>
 
-<div class="max-w-screen-2xl mx-auto p-6">
+<div class="page-wrapper page-wide">
   
   <div class="mb-6 text-center">
     <h2 class="text-3xl md:text-4xl font-bold theme-text-accent tracking-tight mb-2">

@@ -90,85 +90,90 @@
     </div>
   </div>
 {/if}
-<div class="flex flex-col lg:flex-row gap-8">
+<!-- Wrap the existing flex layout in a wide container so it gets padding and doesn't touch the edges of the monitor -->
+<div class="page-wrapper page-wide">
+  <div class="mb-6 text-center">
+    <h2 class="text-3xl md:text-4xl font-bold theme-text-accent tracking-tight mb-2">
+        Equipment Shop
+      </h2>
+      <p class="text-base theme-text-muted max-w-2xl mx-auto text-center mb-6">
+      Left-click to buy 1. Right-click to buy custom amount.
+      </p>
+    </div>
+  <div class="flex flex-col lg:flex-row gap-8">
   
-  <!-- LEFT PANEL: SHOP (Flexes to fill remaining space) -->
-  <div class="flex-1 mt-6">
-    <h2 class="text-3xl md:text-4xl font-bold theme-text-accent tracking-tight mb-2 text-center">
-      Equipment Shop
-    </h2>
-    <p class="text-base theme-text-muted max-w-2xl mx-auto text-center mb-6">
-    Left-click to buy 1. Right-click to buy custom amount.
-    </p>
+    <!-- LEFT PANEL: SHOP (Flexes to fill remaining space) -->
+    <div class="flex-1 mt-6">
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-      {#each availableEquipment as item}
-        <!-- Notice we apply the actions directly to the whole card! -->
-        <button 
-          class="theme-surface theme-surface-hover p-4 rounded border theme-border flex flex-col text-left theme-border-hover
-                 {gameState.cash < item.itemBuyPrice ? 'opacity-50' : ''}"
-          onclick={() => buySingle(item)}
-          oncontextmenu={(e) => openPopup(item, e)}
-        >
-          
-          <h3 class="text-lg theme-text-accent font-bold border-b theme-border pb-2 mb-3 leading-tight w-full">
-            {item.itemName} - <br/><span class="theme-text">${formatLargeNumber(item.itemBuyPrice)}</span>
-          </h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {#each availableEquipment as item}
+          <!-- Notice we apply the actions directly to the whole card! -->
+          <button 
+            class="theme-surface theme-surface-hover p-4 rounded border theme-border flex flex-col text-left theme-border-hover
+                   {gameState.cash < item.itemBuyPrice ? 'opacity-50' : ''}"
+            onclick={() => buySingle(item)}
+            oncontextmenu={(e) => openPopup(item, e)}
+          >
+            
+            <h3 class="text-lg theme-text-accent font-bold border-b theme-border pb-2 mb-3 leading-tight w-full">
+              {item.itemName} - <br/><span class="theme-text">${formatLargeNumber(item.itemBuyPrice)}</span>
+            </h3>
 
-          <div class="flex gap-3 flex-1 mb-4 w-full">
-            <div class="shrink-0">
-              {#if item.picB64}
-                <img src={item.picB64} alt={item.itemName} class="w-16 h-16 object-contain theme-surface rounded p-1 border theme-border" style="image-rendering: pixelated;"/>
-              {:else}
-                <div class="w-16 h-16 theme-surface border theme-border flex items-center justify-center text-2xl rounded">📦</div>
-              {/if}
-            </div>
-
-            <div class="flex-1 text-xs text-gray-300 flex flex-col gap-1">
-              {#if item.damage}<p>Dmg: <span class="theme-text font-bold">{formatLargeNumber(item.damage)}</span></p>{/if}
-              {#if item.Strength}<p>Str: <span class="theme-text">{formatLargeNumber(item.Strength)}</span></p>{/if}
-              {#if item.cooldown_secs}<p>CD: <span class="theme-text">{item.cooldown_secs}s</span></p>{/if}
-            </div>
-          </div>
-        </button>
-      {/each}
-    </div>
-  </div>
-
-  <!-- RIGHT PANEL: INVENTORY (Fixed width, visual grid) -->
-  <!-- lg:w-80 keeps the panel nice and neat on the right side of the screen -->
-  <div class="lg:w-80 shrink-0">
-    <div class="sticky top-4">
-      <h2 class="text-2xl font-bold mb-4 theme-text-accent border-b theme-border pb-2">Inventory</h2>
-      
-      <!-- A neat 4-column visual grid to mimic the game's UI -->
-      <div class="theme-surface theme-surface-hover p-4 rounded border theme-border">
-        {#if activeInventory.length === 0}
-          <p class="theme-text-muted italic text-center py-8">Your inventory is empty.</p>
-        {:else}
-          <div class="grid grid-cols-4 gap-2">
-            {#each activeInventory as {item, qty}}
-              <button 
-                class="relative w-14 h-14 theme-surface border theme-border rounded flex items-center justify-center theme-border-hover cursor-pointer"
-                oncontextmenu={(e) => openPopup(item, e)}
-                onclick={(e) => openPopup(item, e)}
-                title="{item.itemName}"
-              >
+            <div class="flex gap-3 flex-1 mb-4 w-full">
+              <div class="shrink-0">
                 {#if item.picB64}
-                  <img src={item.picB64} class="w-10 h-10 object-contain" style="image-rendering: pixelated;" />
+                  <img src={item.picB64} alt={item.itemName} class="w-16 h-16 object-contain theme-surface rounded p-1 border theme-border" style="image-rendering: pixelated;"/>
+                {:else}
+                  <div class="w-16 h-16 theme-surface border theme-border flex items-center justify-center text-2xl rounded">📦</div>
                 {/if}
-                
-                <!-- Format the quantity if it gets ridiculously high -->
-                <div class="absolute -bottom-2 -right-2 bg-gray-700 theme-text text-[10px] font-bold px-1 rounded border theme-border z-10 shadow">
-                  x{formatLargeNumber(qty)}
-                </div>
-              </button>
-            {/each}
-          </div>
-        {/if}
-      </div>
-      
-    </div>
-  </div>
+              </div>
 
+              <div class="flex-1 text-xs text-gray-300 flex flex-col gap-1">
+                {#if item.damage}<p>Dmg: <span class="theme-text font-bold">{formatLargeNumber(item.damage)}</span></p>{/if}
+                {#if item.Strength}<p>Str: <span class="theme-text">{formatLargeNumber(item.Strength)}</span></p>{/if}
+                {#if item.cooldown_secs}<p>CD: <span class="theme-text">{item.cooldown_secs}s</span></p>{/if}
+              </div>
+            </div>
+          </button>
+        {/each}
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL: INVENTORY (Fixed width, visual grid) -->
+    <!-- lg:w-80 keeps the panel nice and neat on the right side of the screen -->
+    <div class="lg:w-80 shrink-0">
+      <div class="sticky top-4">
+        <h2 class="text-2xl font-bold mb-4 theme-text-accent border-b theme-border pb-2">Inventory</h2>
+        
+        <!-- A neat 4-column visual grid to mimic the game's UI -->
+        <div class="theme-surface theme-surface-hover p-4 rounded border theme-border">
+          {#if activeInventory.length === 0}
+            <p class="theme-text-muted italic text-center py-8">Your inventory is empty.</p>
+          {:else}
+            <div class="grid grid-cols-4 gap-2">
+              {#each activeInventory as {item, qty}}
+                <button 
+                  class="relative w-14 h-14 theme-surface border theme-border rounded flex items-center justify-center theme-border-hover cursor-pointer"
+                  oncontextmenu={(e) => openPopup(item, e)}
+                  onclick={(e) => openPopup(item, e)}
+                  title="{item.itemName}"
+                >
+                  {#if item.picB64}
+                    <img src={item.picB64} class="w-10 h-10 object-contain" style="image-rendering: pixelated;" />
+                  {/if}
+                  
+                  <!-- Format the quantity if it gets ridiculously high -->
+                  <div class="absolute -bottom-2 -right-2 bg-gray-700 theme-text text-[10px] font-bold px-1 rounded border theme-border z-10 shadow">
+                    x{formatLargeNumber(qty)}
+                  </div>
+                </button>
+              {/each}
+            </div>
+          {/if}
+        </div>
+        
+      </div>
+    </div>
+
+  </div>
 </div>

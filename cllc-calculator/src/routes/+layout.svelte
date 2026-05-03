@@ -239,8 +239,8 @@ function handleEnter(event) {
 </nav>
 </div>
 
-  <main class="flex-1 overflow-y-auto">
-    <div class="relative">
+  <main class="flex-1 overflow-y-auto bg-[var(--bg-main)] text-[var(--text-main)] transition-colors duration-300">
+    <div class="relative min-h-full">
       {@render children()} 
     </div>
   </main>
