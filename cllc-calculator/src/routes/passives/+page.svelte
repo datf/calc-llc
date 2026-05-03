@@ -40,7 +40,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       
       {#each PASSIVE_KEYS as key}
-        <div class="theme-surface border theme-border rounded-lg p-4 flex flex-col justify-center h-24">
+        <div class="theme-surface theme-border border rounded-lg p-4 flex flex-col justify-center h-24">
           <label for={key} class="block text-sm font-bold theme-text mb-2">
             {formatLabel(key)}
           </label>
@@ -52,7 +52,7 @@
               step={getDisplayPercent(passivesInfo[key])} 
               value={getDisplayPercent(gameState.passives[key])}
               oninput={(e) => handleInput(key, e)}
-              class="w-full theme-surface border theme-border theme-text p-2 rounded theme-border-focus focus:outline-none focus:ring-1 focus:ring-coal-gold font-mono"
+              class="w-full theme-input p-2 rounded theme-border-focus font-mono"
             />
             <span class="theme-text-accent font-bold text-lg">%</span>
           </div>
