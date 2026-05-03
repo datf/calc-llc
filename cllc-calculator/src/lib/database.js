@@ -136,28 +136,30 @@ export function getQuestItems(professionId) {
 
 // --- EMPLOYEE & PASSIVE SELECTORS ---
 
-// 2. NEW LOGIC: Filter employees by looking up the active profession
+// Extracted helper for org chart recursion
+function findPromotions(currentLevelName, allEmployees) {
+  const promotions = allEmployees.filter(e => e.upgrades_from === currentLevelName);
+  if (promotions.length === 0) return null;
+
+  return promotions.map(p => ({
+    ...p,
+    promotions: findPromotions(p.level_name, allEmployees)
+  }));
+}
+
 export function getOrgChart(professionId) {
   const prof = professions.get(professionId);
   const lockedEmployees = new Set(prof?.locked_employees || []);
 
   const allEmployees = Array.from(employees.values()).filter(emp => !lockedEmployees.has(emp.employee_id));
   const validLevels = new Set(allEmployees.map(e => e.level_name));
+  
+  // Base employees are those whose upgrades_from doesn't match any valid level_name
   const baseEmployees = allEmployees.filter(emp => !validLevels.has(emp.upgrades_from));
-
-  function findPromotions(currentLevelName) {
-    const promotions = allEmployees.filter(e => e.upgrades_from === currentLevelName);
-    if (promotions.length === 0) return null;
-
-    return promotions.map(p => ({
-      ...p,
-      promotions: findPromotions(p.level_name)
-    }));
-  }
 
   return baseEmployees.map(base => ({
     ...base,
-    promotions: findPromotions(base.level_name)
+    promotions: findPromotions(base.level_name, allEmployees)
   }));
 }
 
