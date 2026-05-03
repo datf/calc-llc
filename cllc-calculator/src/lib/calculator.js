@@ -5,9 +5,11 @@ import * as math from 'mathjs';
 export function calculateLoadoutDPS(loadout, gameState) {
   let totalDPS = 0;
 
-  // 1. Gather all active sources in this loadout
-  const activeSources = [...loadout.independents, ...loadout.modifiers];
-  if (loadout.heldWeapon) activeSources.push(loadout.heldWeapon);
+  // 1. Gather all active sources in this loadout (with safety fallbacks)
+  const { independents = [], modifiers = [], heldWeapon = null } = loadout || {};
+  const activeSources = [...independents, ...modifiers];
+  
+  if (heldWeapon) activeSources.push(heldWeapon);
 
   if (activeSources.length === 0) return 0;
 
