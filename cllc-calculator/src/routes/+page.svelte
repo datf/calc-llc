@@ -20,7 +20,7 @@
         const success = gameState.loadSaveData(saveJson);
         
         if (success) {
-          goto('#/employees'); 
+          goto('/employees'); 
         } else {
           errorMessage = "Save file was loaded but missing expected data structures.";
         }

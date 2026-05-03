@@ -103,7 +103,7 @@
   <div class="flex flex-col lg:flex-row gap-8">
   
     <!-- LEFT PANEL: SHOP (Flexes to fill remaining space) -->
-    <div class="flex-1 mt-6">
+    <div class="flex-1">
 
       <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {#each availableEquipment as item}

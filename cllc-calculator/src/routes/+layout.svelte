@@ -2,6 +2,17 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import '../app.css';
 	import { gameState, GAME_OPTIONS } from '$lib/game.svelte.js';
+  import { page } from '$app/stores';
+
+  // Extract links into an array to keep your HTML clean and DRY
+  const navLinks = [
+    { href: '/', label: 'Welcome' },
+    { href: '/employees', label: 'Employees' },
+    { href: '/equipment', label: 'Equipment' },
+    { href: '/passives', label: 'Passives' },
+    { href: '/calculator', label: 'Calculator' }
+    ];
+
 	let theme = $state('dark');
 	function toggleTheme() {
 		theme = theme === 'dark' ? 'light' : 'dark';
@@ -228,14 +239,18 @@ function handleEnter(event) {
   </div>
 </header>
 
-
-<nav class="flex gap-4 p-4 theme-surface border-b theme-border-hover">
-  <a href="#/" class="theme-text-accent hover:theme-text transition">Welcome</a>
-  <a href="#/character" class="theme-text-accent hover:theme-text transition">Character Setup</a>
-  <a href="#/employees" class="theme-text-accent hover:theme-text transition">Employees</a>
-  <a href="#/equipment" class="theme-text-accent hover:theme-text transition">Equipment</a>
-  <a href="#/passives" class="theme-text-accent hover:theme-text transition">Passives</a>
-  <a href="#/calculator" class="theme-text-accent hover:theme-text transition">Calculator</a>
+<nav class="flex gap-4 p-4 theme-surface border-b theme-border overflow-x-auto">
+  {#each navLinks as { href, label }}
+    <a 
+      {href} 
+      class="px-2 py-1 transition-all duration-200 border-b-2 whitespace-nowrap
+        {$page.url.pathname === href 
+          ? 'theme-text-accent border-[var(--accent)] font-bold' 
+          : 'theme-text-muted border-transparent hover:theme-text hover:border-[var(--border-main)]'}"
+    >
+      {label}
+    </a>
+  {/each}
 </nav>
 </div>
 

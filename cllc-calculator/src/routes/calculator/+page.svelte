@@ -267,12 +267,12 @@
   </div>
 
   <!-- TABS NAVIGATION -->
-  <div class="flex gap-2 mb-6 border-b theme-border pb-px">
+  <div class="flex gap-2 border-b theme-border pb-px">
     <button class="px-6 py-3 font-bold rounded-t-lg {activeTab === 'power' ? 'theme-surface theme-surface-hover theme-text-accent border-t border-l border-r theme-border' : 'theme-surface theme-text-muted hover:theme-text'}" onclick={() => activeTab = 'power'}>Current Power</button>
     <button class="px-6 py-3 font-bold rounded-t-lg {activeTab === 'suggestions' ? 'theme-surface theme-surface-hover theme-text-accent border-t border-l border-r theme-border' : 'theme-surface theme-text-muted hover:theme-text'}" onclick={() => activeTab = 'suggestions'}>Proposed Upgrades</button>
   </div>
 
-  <div class="theme-surface theme-surface-hover border theme-border rounded-b-xl rounded-tr-xl p-6 shadow-2xl min-h-[60vh]">
+  <div class="theme-surface theme-surface-hover border theme-border rounded-b-xl p-6 shadow-2xl min-h-[60vh]">
     
     {#if activeTab === 'power'}
       <!-- BUILDER UI -->
