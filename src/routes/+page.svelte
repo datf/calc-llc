@@ -1,6 +1,7 @@
 <script>
   import { gameState } from '$lib/game.svelte.js'; // Import your singleton instance
   import { goto } from '$app/navigation';
+  import { resolve } from '$app/paths';
 
   let fileInput;
   let errorMessage = $state("");
@@ -15,12 +16,12 @@
     reader.onload = (e) => {
       try {
         const saveJson = JSON.parse(e.target.result);
-        
+
         // Call the method ON the class instance
         const success = gameState.loadSaveData(saveJson);
-        
+
         if (success) {
-          goto('/employees'); 
+          goto(resolve('/employees'));
         } else {
           errorMessage = "Save file was loaded but missing expected data structures.";
         }
@@ -28,8 +29,8 @@
         errorMessage = "Invalid file. Make sure it's a valid JSON save file.";
         console.error(err);
       }
-      
-      fileInput.value = ""; 
+
+      fileInput.value = "";
     };
 
     reader.readAsText(file);
@@ -48,7 +49,7 @@
     <label for="save-upload" class="block text-xl font-bold theme-text mb-6">
       Load Save File
     </label>
-    
+
     <input
       id="save-upload"
       type="file"
@@ -62,7 +63,7 @@
       onchange={handleFileUpload}
       bind:this={fileInput}
     />
-    
+
     {#if errorMessage}
       <div class="mt-6 p-4 bg-red-500/10 border border-red-500 rounded text-red-500 text-sm">
         {errorMessage}

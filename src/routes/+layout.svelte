@@ -1,16 +1,17 @@
 <script lang="ts">
-	import favicon from '$lib/assets/favicon.svg';
-	import '../app.css';
-	import { gameState, GAME_OPTIONS } from '$lib/game.svelte.js';
-  import { page } from '$app/stores';
+import favicon from '$lib/assets/favicon.svg';
+import '../app.css';
+import { gameState, GAME_OPTIONS } from '$lib/game.svelte.js';
+import { page } from '$app/stores';
+import { resolve } from '$app/paths';
 
   // Extract links into an array to keep your HTML clean and DRY
   const navLinks = [
-    { href: '/', label: 'Welcome' },
-    { href: '/employees', label: 'Employees' },
-    { href: '/equipment', label: 'Equipment' },
-    { href: '/passives', label: 'Passives' },
-    { href: '/calculator', label: 'Calculator' }
+    { href: resolve('/'), label: 'Welcome' },
+    { href: resolve('/employees'), label: 'Employees' },
+    { href: resolve('/equipment'), label: 'Equipment' },
+    { href: resolve('/passives'), label: 'Passives' },
+    { href: resolve('/calculator'), label: 'Calculator' }
     ];
 
 	let theme = $state('dark');
