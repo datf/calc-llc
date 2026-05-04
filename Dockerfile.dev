@@ -1,20 +1,16 @@
-# Use an official Node.js alpine image for a smaller footprint
-FROM node:20-alpine
+FROM node:24-alpine
 
-# Set the working directory inside the container
+RUN npm install -g pnpm@latest
+
 WORKDIR /app
 
-# Copy package files first to leverage Docker layer caching
-COPY package.json package-lock.json ./
+COPY package.json pnpm-lock.yaml ./
 
-# Install all dependencies (including devDependencies needed for Vite)
-RUN npm install
+RUN pnpm install
 
-# Copy the rest of your application code
 COPY . .
 
-# Expose Vite's default development port
 EXPOSE 5173
+EXPOSE 4173
 
-# Start the dev server and bind to 0.0.0.0 so it's accessible outside the container
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+CMD ["pnpm", "run", "dev", "--", "--host", "0.0.0.0"]

@@ -1,0 +1,10 @@
+FROM node:24-alpine
+
+RUN npm install -g pnpm@latest
+
+WORKDIR /app
+
+EXPOSE 5173
+EXPOSE 4173
+
+CMD ["/bin/sh"]

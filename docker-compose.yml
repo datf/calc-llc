@@ -1,19 +1,39 @@
 version: '3.8'
 
 services:
-  svelte-app:
+  svelte-app: &svelte-base
     build:
       context: .
       dockerfile: Dockerfile.dev
     ports:
-      - '5173:5173' # Map the Vite dev server port to your local machine
+      - '5173:5173'
     volumes:
-      # Mount your local project directory to /app in the container
       - .:/app
-      # Prevent the container from using your local node_modules folder
-      # This ensures it uses the Linux binaries installed inside the container
       - /app/node_modules
     environment:
       - NODE_ENV=development
-      # Optional: Force Vite to use polling if standard HMR file watching fails
+      # Force Vite to use polling if standard HMR file watching fails
+      - CHOKIDAR_USEPOLLING=true
+
+  svelte-preview:
+    <<: *svelte-base
+    command: sh -c "pnpm build && pnpm preview"
+    ports:
+      - '4173:4173'
+    environment:
+      - NODE_ENV=production
+
+  pnpm-only:
+    command: sh
+    build:
+      context: .
+      dockerfile: Dockerfile.pnpm
+    ports:
+      - '5173:5173'
+      - '4173:4173'
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
       - CHOKIDAR_USEPOLLING=true

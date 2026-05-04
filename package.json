@@ -29,5 +29,15 @@
 	},
 	"dependencies": {
 		"mathjs": "^15.2.0"
+	},
+	"devEngines":{
+		"packageManager": {
+			"name": "pnpm"
+		}
+	},
+	"pnpm": {
+		"overrides": {
+			"cookie": "^0.7.0"
+		}
 	}
 }
