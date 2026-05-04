@@ -18,6 +18,10 @@ const config = {
     output: {
       bundleStrategy: 'inline'
     },
+    paths: {
+      base: process.argv.includes('dev') ? '' : process.env.BASE_PATH
+    }
+
 	  //router: {
 		//  type: 'hash'
 	  //}
