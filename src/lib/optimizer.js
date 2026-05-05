@@ -180,12 +180,15 @@ export function calculateBestUpgrades(gameState, items, employees, upgradeStrate
 	const optimalSelection = [];
 	let totalDPS = 0;
 
-	let hasHeldWeapon = false; // <-- 1. Add weapon slot tracker
+	let hasHeldWeapon = false;
+	let hasPoison = false;
+	let hasFire = false;
+	let hasJet = false;
+	let hasKick = false;
 
 	for (const item of candidates) {
 		if (item.price > remainingBudget) continue;
 
-		// 2. Determine if this item is a main held weapon
 		const itemTypeStr = item.itemType || '';
 		const isHeldWeapon =
 			!item.isEmployee &&
@@ -194,16 +197,30 @@ export function calculateBestUpgrades(gameState, items, employees, upgradeStrate
 			!itemTypeStr.includes('water') &&
 			!CONSUMABLE_TYPES.includes(itemTypeStr);
 
-		// 3. If we already bought a weapon, skip any other held weapons!
-		if (isHeldWeapon && hasHeldWeapon) {
-			continue;
-		}
+		// Identify if this item fills an exclusive action/effect slot
+		const isPoison = itemTypeStr.includes('poison');
+		const isFire = itemTypeStr.includes('flame') || itemTypeStr.includes('fire');
+		const isJet = itemTypeStr.includes('jet');
+		const isKick = itemTypeStr.includes('kick'); // catches 'roundhouse_kick'
+
+		// If we already filled this slot with a stronger item, skip!
+		if (isHeldWeapon && hasHeldWeapon) continue;
+		if (isPoison && hasPoison) continue;
+		if (isFire && hasFire) continue;
+		if (isJet && hasJet) continue;
+		if (isKick && hasKick) continue;
 
 		if (item.isOwned) {
 			optimalSelection.push({ ...item, qty: 1 });
 			remainingBudget -= item.price;
 			totalDPS += item.value;
-			if (isHeldWeapon) hasHeldWeapon = true; // Mark slot as filled
+
+			// Mark slots as filled
+			if (isHeldWeapon) hasHeldWeapon = true;
+			if (isPoison) hasPoison = true;
+			if (isFire) hasFire = true;
+			if (isJet) hasJet = true;
+			if (isKick) hasKick = true;
 		} else {
 			// Calculate quantity
 			const isStackable = !NON_STACKABLE_TYPES.includes(itemTypeStr) && !isHeldWeapon;
@@ -216,7 +233,13 @@ export function calculateBestUpgrades(gameState, items, employees, upgradeStrate
 				const totalCost = item.price * BigInt(qtyToBuy);
 				remainingBudget -= totalCost;
 				totalDPS += item.value * qtyToBuy;
-				if (isHeldWeapon) hasHeldWeapon = true; // Mark slot as filled
+
+				// Mark slots as filled
+				if (isHeldWeapon) hasHeldWeapon = true;
+				if (isPoison) hasPoison = true;
+				if (isFire) hasFire = true;
+				if (isJet) hasJet = true;
+				if (isKick) hasKick = true;
 			}
 		}
 	}
