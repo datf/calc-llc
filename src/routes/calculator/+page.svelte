@@ -4,21 +4,12 @@
   import { tiles, items, employees, passiveMap } from '$lib/database.js';
   import { formatLargeNumber } from '$lib/utils.js';
   import { calculateLoadoutDPS } from '$lib/calculator.js';
+  import {
+    IGNORED_TYPES, INDEPENDENT_TYPES, MODIFIER_TYPES, NON_STACKABLE_TYPES,
+    formatEmployeeName, calculateBestUpgrades
+  } from '$lib/optimizer.js';
 
   let activeTab = $state('power');
-
-  // --- CATEGORIZATION ARRAYS ---
-  const IGNORED_TYPES = ["mining_whistle", "ladder", "collector_whistle", "platform", "gravity_enhancer", "teleporter"];
-  const INDEPENDENT_TYPES = ["poison_gun", "bomb", "flamethrower", "drill", "mortar_gun", "roundhouse_kick", "jet"];
-  const MODIFIER_TYPES = ["water_gun", "water_staff"];
-  const NON_STACKABLE_TYPES = ["roundhouse_kick", "poison_gun", "poison_staff", "flamethrower", "jet", "water_gun", "water_staff"];
-
-  function formatEmployeeName(id) {
-    if (!id) return "Unknown";
-    return id.split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ');
-  }
 
   // --- SOURCE LOGIC ---
   let sources = $derived.by(() => {
@@ -245,179 +236,12 @@
   let upgradeResults = $state([]);
   let isCalculating = $state(false);
 
-  // DPS Memoization
-  const dpsCache = new Map();
-
-  function getMemoizedItemDPS(id, isEmployee = false) {
-    if (dpsCache.has(id)) return dpsCache.get(id);
-
-    let mockLoadout = { independents: [], modifiers: [], heldWeapon: null };
-
-    if (isEmployee) {
-      const emp = employees.get(id);
-      if (emp) {
-        mockLoadout.independents.push({
-          type: 'employee',
-          data: { ...emp, weapon_strength: Number(items.get(emp.equipment_itemID)?.Strength || 0) },
-          activeCount: 1
-        });
-      }
-    } else {
-      const item = items.get(id);
-      if (item && !IGNORED_TYPES.includes(item.itemType)) {
-        const sourceData = { type: 'equipment', data: item, activeCount: 1 };
-        if (MODIFIER_TYPES.includes(item.itemType) || item.itemType.includes("water")) {
-          mockLoadout.modifiers.push(sourceData);
-        } else if (INDEPENDENT_TYPES.includes(item.itemType)) {
-          mockLoadout.independents.push(sourceData);
-        } else {
-          mockLoadout.heldWeapon = sourceData;
-        }
-      }
-    }
-
-    const dps = calculateLoadoutDPS(mockLoadout, gameState);
-    dpsCache.set(id, dps);
-    return dps;
-  }
-
-  function calculateUpgrades() {
+  function executeCalculation() {
     isCalculating = true;
-    
+
+    // Slight timeout allows the UI to render the "Calculating..." state
     setTimeout(() => {
-      let totalSellValue = 0;
-      const inventoryItems = [];
-      const shopItems = [];
-
-      // 1. Calculate max capacity based on cash + sellable inventory
-      for (const [id, count] of Object.entries(gameState.inventory)) {
-        if (count > 0) {
-          const item = items.get(id);
-          if (item && item.itemSellPrice) {
-            const sellPriceNum = Number(item.itemSellPrice);
-            totalSellValue += (sellPriceNum * Number(count));
-            for (let i = 0; i < count; i++) {
-              inventoryItems.push({ ...item, refId: id, weight: sellPriceNum, isOwned: true, isEmployee: false });
-            }
-          }
-        }
-      }
-
-      // active employees -> inventory representation
-      for (const [id, count] of Object.entries(gameState.hiredEmployees)) {
-        if (count > 0n) {
-          const emp = employees.get(id);
-          if (emp && emp.price) { 
-            const sellValue = Math.floor(Number(emp.price) * 0.5); 
-            totalSellValue += (sellValue * Number(count));
-            for(let i=0; i < Number(count); i++) {
-              inventoryItems.push({ ...emp, name: formatEmployeeName(emp.employee_id), refId: id, weight: sellValue, isOwned: true, isEmployee: true });
-            }
-          }
-        }
-      }
-
-      const maxCapacity = Math.floor(Number(gameState.cash || 0) + totalSellValue);
-
-      // 2. Filter unaffordable shop items
-      for (const [id, item] of items.entries()) {
-        const buyPriceNum = Number(item.itemBuyPrice || Infinity);
-        if (buyPriceNum <= maxCapacity && !IGNORED_TYPES.includes(item.itemType)) {
-          shopItems.push({ ...item, refId: id, weight: buyPriceNum, isOwned: false, isEmployee: false });
-        }
-      }
-
-      // Assign values based on strategy
-      const candidates = [...shopItems, ...inventoryItems].map(c => {
-        let value = 0;
-        if (upgradeStrategy === 'MAX_DPS') {
-          value = getMemoizedItemDPS(c.refId, c.isEmployee);
-        } else if (upgradeStrategy === 'COLLECTION') {
-          value = c.isOwned ? 1 : 100;
-        } else {
-          value = Math.random() * 10; // Placeholder for Quests weighting
-        }
-        return { ...c, value };
-      }).filter(c => c.value > 0);
-
-      // 3. 0/1 Knapsack Execution
-      // Scale down constraints to prevent Out of Memory errors in large economies
-      const scaleFactor = Math.max(1, Math.floor(maxCapacity / 50000)); 
-      const W = Math.floor(maxCapacity / scaleFactor);
-      
-      const dp = new Float32Array(W + 1);
-      const keep = Array.from({ length: candidates.length }, () => new Uint8Array(W + 1));
-
-      for (let i = 0; i < candidates.length; i++) {
-        const wt = Math.ceil(candidates[i].weight / scaleFactor);
-        const val = candidates[i].value;
-        if (wt <= 0) continue;
-
-        for (let w = W; w >= wt; w--) {
-          if (dp[w - wt] + val > dp[w]) {
-            dp[w] = dp[w - wt] + val;
-            keep[i][w] = 1;
-          }
-        }
-      }
-
-      // 4. Backtrack Optimal Path
-      let remainingW = W;
-      const optimalSelection = [];
-      for (let i = candidates.length - 1; i >= 0; i--) {
-        if (keep[i] && keep[i][remainingW] === 1) {
-          optimalSelection.push(candidates[i]);
-          remainingW -= Math.ceil(candidates[i].weight / scaleFactor);
-        }
-      }
-
-      // 5. Structure the Actions (Buy / Sell / Keep)
-      const toBuy = optimalSelection.filter(i => !i.isOwned);
-      
-      const keptIds = [];
-      optimalSelection.filter(i => i.isOwned).forEach(i => keptIds.push(i.refId));
-      
-      let tempInv = [...inventoryItems];
-      keptIds.forEach(kId => {
-          const idx = tempInv.findIndex(t => t.refId === kId);
-          if(idx !== -1) tempInv.splice(idx, 1);
-      });
-      const toSell = tempInv; // Whats not kept is sold
-
-      const groupItems = (arr, isBuy) => {
-          const map = new Map();
-          arr.forEach(i => {
-              const key = i.refId;
-              const price = isBuy ? Number(i.itemBuyPrice || 0) : i.weight;
-              if (map.has(key)) {
-                  const entry = map.get(key);
-                  entry.qty++;
-                  entry.total += price;
-              } else {
-                  map.set(key, { 
-                    name: i.itemName || i.name, 
-                    qty: 1, 
-                    total: price, 
-                    pics: [i.picB64 || i.head_texture_base64] 
-                  });
-              }
-          });
-          return Array.from(map.values());
-      };
-
-      // Set Up Options Array
-      upgradeResults = [{
-          id: 1,
-          projectedValue: dp[W],
-          buy: { items: groupItems(toBuy, true), totalSpent: toBuy.reduce((sum, i) => sum + Number(i.itemBuyPrice || 0), 0) },
-          sell: { items: groupItems(toSell, false), totalEarned: toSell.reduce((sum, i) => sum + i.weight, 0) },
-          quests: upgradeStrategy === 'QUESTS' ? ["Complete 'The Deep Dig' for +500g"] : []
-      }];
-
-      // Mock options 2 and 3 for UI demonstration
-      upgradeResults.push({...upgradeResults[0], id: 2, projectedValue: dp[W] * 0.9, buy: {items:[], totalSpent:0}});
-      upgradeResults.push({...upgradeResults[0], id: 3, projectedValue: dp[W] * 0.75, sell: {items:[], totalEarned:0}});
-
+      upgradeResults = calculateBestUpgrades(gameState, items, employees, upgradeStrategy);
       isCalculating = false;
     }, 50);
   }
@@ -678,7 +502,7 @@
     {:else}
       <!-- PROPOSED UPGRADES TAB -->
       <div class="p-4">
-        
+
         <div class="flex flex-col md:flex-row gap-4 items-center justify-between bg-black/20 p-4 border theme-border rounded-xl mb-6">
           <div class="flex items-center gap-3">
             <span class="font-bold theme-text-muted text-sm uppercase tracking-wider">Strategy:</span>
@@ -688,8 +512,8 @@
               <option value="QUESTS">Suggest Quests</option>
             </select>
           </div>
-          <button 
-            onclick={calculateUpgrades} 
+          <button
+            onclick={executeCalculation}
             disabled={isCalculating}
             class="px-6 py-2 bg-yellow-600 hover:bg-yellow-500 text-black font-bold rounded shadow-[0_0_10px_rgba(202,138,4,0.4)] disabled:opacity-50 transition-colors"
           >
@@ -701,7 +525,7 @@
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {#each upgradeResults as option}
               <div class="theme-surface border {option.id === 1 ? 'theme-border-hover shadow-[0_0_15px_rgba(255,215,0,0.1)]' : 'theme-border'} rounded-xl p-5 flex flex-col h-full">
-                
+
                 <div class="border-b theme-border pb-3 mb-4">
                   <div class="flex justify-between items-center mb-1">
                     <h3 class="text-lg font-bold {option.id === 1 ? 'theme-text-accent' : 'theme-text'}">Option {option.id}</h3>
@@ -773,7 +597,7 @@
                 </div>
 
                 <!-- Add to Loadout Button -->
-                <button 
+                <button
                   class="mt-6 w-full py-2 bg-black/40 hover:bg-black/60 border theme-border theme-text-muted hover:theme-text font-bold text-sm rounded transition-colors"
                   onclick={() => alert('Logic to create a new loadout from these items will go here')}
                 >
@@ -792,4 +616,3 @@
     {/if}
   </div>
 </div>
-
