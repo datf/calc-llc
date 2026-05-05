@@ -2,10 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { calculateBestUpgrades } from './optimizer.js';
 import { items, employees } from './database.js';
 
-BigInt.prototype.toJSON = function () {
-	return this.toString();
-};
-
 describe('Optimizer Knapsack Greedy Algorithm', () => {
 	it('should correctly suggest selling unused inventory for a DPS upgrade', () => {
 		const mockGameState = {
@@ -123,8 +119,6 @@ describe('Optimizer Integration (Real Items)', () => {
 		const results = calculateBestUpgrades(realGameState, items, mockEmployees, 'MAX_DPS');
 		const option1 = results.find((opt) => opt.id === 1);
 		if (!option1) throw new Error('Option 1 was not found in results');
-
-		console.debug(JSON.stringify(results));
 
 		const shotgun = option1.buy.items.find((i) => i.name === 'Sapphire Shotgun');
 		const dynamite = option1.buy.items.find((i) => i.name === 'Weak Dynamite');
