@@ -25,10 +25,10 @@ jobs:
           version: 10
           run_install: true
 
-      - name: Run Tests
+      - name: Run linter
         run: pnpm run lint
 
-      - name: Run Tests
+      - name: Run prettier check
         run: pnpm run check
 
       - name: Run Tests
