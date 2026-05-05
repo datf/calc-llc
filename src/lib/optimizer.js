@@ -28,6 +28,7 @@ export const NON_STACKABLE_TYPES = [
 	'water_gun',
 	'water_staff'
 ];
+export const CONSUMABLE_TYPES = ['bomb', 'nuke', 'earthquake']; // Items that deal burst damage and are consumed
 
 // DPS Memoization Cache
 const dpsCache = new Map();
@@ -137,29 +138,41 @@ export function calculateBestUpgrades(gameState, items, employees, upgradeStrate
 	}
 
 	// 3. Calculate Values and Densities
+	const roundDuration = Number(gameState.secondsPerRound || 300);
+
 	const candidates = [...shopItems, ...inventoryItems]
 		.map((c) => {
 			let value = 0;
+			let sortingWeight = 0;
+
 			if (upgradeStrategy === 'MAX_DPS') {
-				value = getMemoizedItemDPS(c.refId, c.isEmployee, items, employees, gameState);
+				const rawDpsOrDamage = getMemoizedItemDPS(
+					c.refId,
+					c.isEmployee,
+					items,
+					employees,
+					gameState
+				);
+				value = rawDpsOrDamage; // Keep the original value for UI reporting
+
+				// Is it a consumable? If so, it deals damage ONCE. If not, it deals damage EVERY SECOND.
+				const isConsumable = !c.isEmployee && CONSUMABLE_TYPES.includes(c.itemType);
+				sortingWeight = isConsumable ? rawDpsOrDamage : rawDpsOrDamage * roundDuration;
 			} else if (upgradeStrategy === 'COLLECTION') {
 				value = c.isOwned ? 1 : 100;
+				sortingWeight = value;
 			} else {
 				value = Math.random() * 10;
+				sortingWeight = value;
 			}
 
-			// Value Density = DPS / Price.
-			// We convert the BigInt price to Number temporarily JUST for the ratio.
-			// Even if price is 1e60, the ratio will just be a very small float, which is fine for sorting.
 			const priceAsNumber = Number(c.price);
-			const density = priceAsNumber > 0 ? value / priceAsNumber : value;
+			// Density uses the temporal sortingWeight instead of raw value
+			const density = priceAsNumber > 0 ? sortingWeight / priceAsNumber : sortingWeight;
 
 			return { ...c, value, density };
 		})
 		.filter((c) => c.value > 0);
-
-	// Sort by density (highest DPS per gold first)
-	candidates.sort((a, b) => b.density - a.density);
 
 	// 4. Greedy Selection (Buy top items until out of money)
 	let remainingBudget = maxCapacity;
@@ -167,37 +180,60 @@ export function calculateBestUpgrades(gameState, items, employees, upgradeStrate
 	let totalDPS = 0;
 
 	for (const item of candidates) {
-		if (item.price <= remainingBudget) {
-			optimalSelection.push(item);
+		if (item.price > remainingBudget) continue;
+
+		if (item.isOwned) {
+			optimalSelection.push({ ...item, qty: 1 });
 			remainingBudget -= item.price;
 			totalDPS += item.value;
+		} else {
+			// Calculate quantity
+			const isHeldWeapon =
+				!INDEPENDENT_TYPES.includes(item.itemType) && !MODIFIER_TYPES.includes(item.itemType);
+			const isStackable = !NON_STACKABLE_TYPES.includes(item.itemType) && !isHeldWeapon;
+
+			const maxAffordable = remainingBudget / item.price;
+			const qtyToBuy = isStackable ? Number(maxAffordable) : 1;
+
+			if (qtyToBuy > 0) {
+				// Push ONCE with the calculated quantity
+				optimalSelection.push({ ...item, qty: qtyToBuy });
+
+				const totalCost = item.price * BigInt(qtyToBuy);
+				remainingBudget -= totalCost;
+				totalDPS += item.value * qtyToBuy;
+			}
 		}
 	}
 
 	// 5. Structure the Actions (Buy / Sell / Keep)
 	const toBuy = optimalSelection.filter((i) => !i.isOwned);
-	const keptIds = [];
-	optimalSelection.filter((i) => i.isOwned).forEach((i) => keptIds.push(i.refId));
+
+	// FIX: Multiply price by the calculated quantity for totalSpent
+	const totalSpent = toBuy.reduce((sum, i) => sum + i.price * BigInt(i.qty || 1), 0n);
+
+	const keptIds = new Set();
+	optimalSelection.filter((i) => i.isOwned).forEach((i) => keptIds.add(i.refId));
 
 	let tempInv = [...inventoryItems];
-	keptIds.forEach((kId) => {
-		const idx = tempInv.findIndex((t) => t.refId === kId);
-		if (idx !== -1) tempInv.splice(idx, 1);
-	});
-	const toSell = tempInv; // What wasn't kept is sold
+	const toSell = tempInv.filter((t) => !keptIds.has(t.refId));
 
+	const totalEarned = toSell.reduce((sum, i) => sum + i.price, 0n); // toSell objects are always qty:1 from Step 1
+
+	// Update groupItems
 	const groupItems = (arr) => {
 		const map = new Map();
 		arr.forEach((i) => {
+			const qty = i.qty || 1;
 			if (map.has(i.refId)) {
 				const entry = map.get(i.refId);
-				entry.qty++;
-				entry.total += i.price;
+				entry.qty += qty;
+				entry.total += i.price * BigInt(qty);
 			} else {
 				map.set(i.refId, {
 					name: i.itemName || i.name,
-					qty: 1,
-					total: i.price,
+					qty: qty,
+					total: i.price * BigInt(qty),
 					pics: [i.picB64 || i.head_texture_base64]
 				});
 			}
@@ -211,11 +247,11 @@ export function calculateBestUpgrades(gameState, items, employees, upgradeStrate
 			projectedValue: totalDPS,
 			buy: {
 				items: groupItems(toBuy),
-				totalSpent: toBuy.reduce((sum, i) => sum + i.price, 0n)
+				totalSpent: totalSpent // Use the fixed sum
 			},
 			sell: {
 				items: groupItems(toSell),
-				totalEarned: toSell.reduce((sum, i) => sum + i.price, 0n)
+				totalEarned: totalEarned
 			},
 			quests: []
 		}
