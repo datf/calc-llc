@@ -95,6 +95,7 @@ function handleEnter(event) {
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
+	<title>Calc LLC</title>
 </svelte:head>
 
 <div class="flex flex-col h-screen overflow-hidden">
