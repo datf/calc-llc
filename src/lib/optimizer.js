@@ -44,11 +44,31 @@ export function formatEmployeeName(id) {
 /**
  * Calculates the DPS value for a single item/employee. Memoized for performance.
  */
-export function getMemoizedItemDPS(id, isEmployee, items, employees, gameState) {
-	if (dpsCache.has(id)) return dpsCache.get(id);
+export function getMemoizedItemDPS(
+	id,
+	isEmployee,
+	items,
+	employees,
+	gameState,
+	baseWeaponId = null
+) {
+	const cacheKey = id + (baseWeaponId ? `_base_${baseWeaponId}` : '');
+	if (dpsCache.has(cacheKey)) return dpsCache.get(cacheKey);
 
 	/** @type {{ independents: any[], modifiers: any[], heldWeapon: any }} */
 	let mockLoadout = { independents: [], modifiers: [], heldWeapon: null };
+
+	if (baseWeaponId) {
+		const baseItem = items.get(baseWeaponId);
+		if (baseItem) {
+			const sourceData = { type: 'equipment', data: baseItem, activeCount: 1 };
+			if (INDEPENDENT_TYPES.includes(baseItem.itemType)) {
+				mockLoadout.independents.push(sourceData);
+			} else {
+				mockLoadout.heldWeapon = sourceData;
+			}
+		}
+	}
 
 	if (isEmployee) {
 		const emp = employees.get(id);
@@ -137,6 +157,29 @@ export function calculateBestUpgrades(gameState, items, employees, upgradeStrate
 		}
 	}
 
+	// 2.5 Find Best Affordable Base Weapon (Pass 1 - For Modifier Evaluation)
+	let bestBaseWeaponItem = null;
+	let highestWeaponDPS = 0;
+
+	for (const item of [...shopItems, ...inventoryItems]) {
+		const itemTypeStr = item.itemType || '';
+
+		// Allow held weapons AND independent weapons (like poison_gun) to be the baseline
+		const isBaseWeapon =
+			!item.isEmployee &&
+			!MODIFIER_TYPES.includes(itemTypeStr) &&
+			!itemTypeStr.includes('water') &&
+			!CONSUMABLE_TYPES.includes(itemTypeStr);
+
+		if (isBaseWeapon) {
+			const dps = getMemoizedItemDPS(item.refId, false, items, employees, gameState);
+			if (dps > highestWeaponDPS) {
+				highestWeaponDPS = dps;
+				bestBaseWeaponItem = item;
+			}
+		}
+	}
+
 	// 3. Calculate Values and Densities
 	const roundDuration = Number(gameState.secondsPerRound || 300);
 
@@ -146,16 +189,26 @@ export function calculateBestUpgrades(gameState, items, employees, upgradeStrate
 			let sortingWeight = 0;
 
 			if (upgradeStrategy === 'MAX_DPS') {
-				const rawDpsOrDamage = getMemoizedItemDPS(
-					c.refId,
-					c.isEmployee,
-					items,
-					employees,
-					gameState
-				);
-				value = rawDpsOrDamage; // Keep the original value for UI reporting
+				const isModifier =
+					MODIFIER_TYPES.includes(c.itemType) || (c.itemType && c.itemType.includes('water'));
+				let rawDpsOrDamage = 0;
 
-				// Is it a consumable? If so, it deals damage ONCE. If not, it deals damage EVERY SECOND.
+				if (isModifier && bestBaseWeaponItem) {
+					const comboDps = getMemoizedItemDPS(
+						c.refId,
+						c.isEmployee,
+						items,
+						employees,
+						gameState,
+						bestBaseWeaponItem.refId
+					);
+					rawDpsOrDamage = Math.max(0, comboDps - highestWeaponDPS);
+				} else {
+					rawDpsOrDamage = getMemoizedItemDPS(c.refId, c.isEmployee, items, employees, gameState);
+				}
+
+				value = rawDpsOrDamage;
+
 				const isConsumable = !c.isEmployee && CONSUMABLE_TYPES.includes(c.itemType);
 				sortingWeight = isConsumable ? rawDpsOrDamage : rawDpsOrDamage * roundDuration;
 			} else if (upgradeStrategy === 'COLLECTION') {
@@ -185,6 +238,7 @@ export function calculateBestUpgrades(gameState, items, employees, upgradeStrate
 	let hasFire = false;
 	let hasJet = false;
 	let hasKick = false;
+	let hasWater = false;
 
 	for (const item of candidates) {
 		if (item.price > remainingBudget) continue;
@@ -202,6 +256,7 @@ export function calculateBestUpgrades(gameState, items, employees, upgradeStrate
 		const isFire = itemTypeStr.includes('flame') || itemTypeStr.includes('fire');
 		const isJet = itemTypeStr.includes('jet');
 		const isKick = itemTypeStr.includes('kick'); // catches 'roundhouse_kick'
+		const isWater = itemTypeStr.includes('water') || MODIFIER_TYPES.includes(itemTypeStr);
 
 		// If we already filled this slot with a stronger item, skip!
 		if (isHeldWeapon && hasHeldWeapon) continue;
@@ -209,6 +264,7 @@ export function calculateBestUpgrades(gameState, items, employees, upgradeStrate
 		if (isFire && hasFire) continue;
 		if (isJet && hasJet) continue;
 		if (isKick && hasKick) continue;
+		if (isWater && hasWater) continue;
 
 		if (item.isOwned) {
 			optimalSelection.push({ ...item, qty: 1 });
@@ -221,6 +277,7 @@ export function calculateBestUpgrades(gameState, items, employees, upgradeStrate
 			if (isFire) hasFire = true;
 			if (isJet) hasJet = true;
 			if (isKick) hasKick = true;
+			if (isWater) hasWater = true;
 		} else {
 			// Calculate quantity
 			const isStackable = !NON_STACKABLE_TYPES.includes(itemTypeStr) && !isHeldWeapon;
@@ -240,6 +297,7 @@ export function calculateBestUpgrades(gameState, items, employees, upgradeStrate
 				if (isFire) hasFire = true;
 				if (isJet) hasJet = true;
 				if (isKick) hasKick = true;
+				if (isWater) hasWater = true;
 			}
 		}
 	}
