@@ -37,6 +37,8 @@ describe('Optimizer Knapsack Greedy Algorithm', () => {
 
 		const option1 = results.find((opt) => opt.id === 1);
 
+		if (!option1) throw new Error('Option 1 was not found in results');
+
 		expect(option1).toBeDefined();
 
 		expect(option1.sell.totalEarned).toBe(5n);

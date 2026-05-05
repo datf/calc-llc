@@ -7,14 +7,19 @@
 
 	// Derive the active inventory items (filtering out items with 0 quantity)
 	let activeInventory = $derived(
-		Object.entries(gameState.inventory)
-			.filter(([id, qty]) => qty > 0n)
-			.map(([id, qty]) => ({ item: items.get(id), qty }))
+		Object.entries(gameState.inventory).flatMap(([id, qty]) => {
+			if (qty <= 0n) return [];
+			const item = items.get(id);
+			if (!item) return [];
+			return [{ item, qty }];
+		})
 	);
 
 	// POPUP STATE FOR CUSTOM AMOUNTS
 	let showPopup = $state(false);
-	let selectedItem = $state(null);
+
+	let selectedItem = $state(/** @type {import('$lib/database.js').GameItem | null} */ (null));
+
 	let inputQty = $state(1n);
 
 	function handleQtyInput(e) {
@@ -24,11 +29,12 @@
 		} catch (err) {}
 	}
 
-	let totalCost = $derived(selectedItem ? selectedItem.itemBuyPrice * inputQty : 0n);
+	let totalCost = $derived(selectedItem ? (selectedItem.itemBuyPrice ?? 0n * inputQty) : 0n);
 	let totalSell = $derived(
 		selectedItem
-			? (selectedItem.itemSellPrice ? selectedItem.itemSellPrice : selectedItem.itemBuyPrice / 2n) *
-					inputQty
+			? (selectedItem.itemSellPrice
+					? selectedItem.itemSellPrice
+					: (selectedItem.itemBuyPrice ?? 0n / 2n)) * inputQty
 			: 0n
 	);
 	let canAfford = $derived(gameState.cash >= totalCost);
@@ -49,6 +55,8 @@
 	}
 
 	function buyQty() {
+		if (!selectedItem) return;
+
 		if (canAfford) {
 			gameState.cash -= totalCost;
 			gameState.inventory[selectedItem.itemID] =
@@ -58,6 +66,8 @@
 	}
 
 	function sellQty() {
+		if (!selectedItem) return;
+
 		let currentQty = gameState.inventory[selectedItem.itemID] || 0n;
 		if (currentQty >= inputQty) {
 			gameState.cash += totalSell;
@@ -67,6 +77,8 @@
 	}
 
 	function setQty() {
+		if (!selectedItem) return;
+
 		gameState.inventory[selectedItem.itemID] = inputQty;
 		showPopup = false;
 	}
@@ -138,7 +150,7 @@
 					<!-- Notice we apply the actions directly to the whole card! -->
 					<button
 						class="theme-surface theme-surface-hover p-4 rounded border theme-border flex flex-col text-left theme-border-hover
-                   {gameState.cash < item.itemBuyPrice ? 'opacity-50' : ''}"
+                   {gameState.cash < (item.itemBuyPrice ?? 0n) ? 'opacity-50' : ''}"
 						onclick={() => buySingle(item)}
 						oncontextmenu={(e) => openPopup(item, e)}
 					>

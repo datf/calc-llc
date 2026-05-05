@@ -98,6 +98,8 @@ class GameState {
 
 		const itemObj = items.get(itemID);
 
+		if (!itemObj) return;
+
 		// Process systemic side-effects
 		if (itemObj.itemType === 'auto_loot_chests') {
 			this.bonus_equipment_manager.auto_loot_chests = true;

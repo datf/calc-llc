@@ -72,7 +72,9 @@
 					{#each availableBonusItems as item}
 						<button
 							class="theme-surface theme-surface-hover p-4 rounded border theme-border flex flex-col text-left theme-border-hover
-                     {gameState.cash < item.itemBuyPrice ? 'opacity-50 cursor-not-allowed' : ''}"
+                     {gameState.cash < (item.itemBuyPrice ?? 0n)
+								? 'opacity-50 cursor-not-allowed'
+								: ''}"
 							onclick={() => buyBonusSingle(item)}
 						>
 							<h3

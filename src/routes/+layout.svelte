@@ -96,6 +96,7 @@
 	// Initialize the watcher for a new file handle
 	async function watchFileHandle(handle) {
 		fileHandle = handle;
+		// @ts-ignore - Experimental File System API
 		const file = await handle.getFile();
 		lastModifiedTime = file.lastModified;
 		fileHasChanged = false;
@@ -105,6 +106,7 @@
 		// Poll every 2 seconds
 		filePollInterval = setInterval(async () => {
 			try {
+				// @ts-ignore - Experimental File System API
 				const currentFile = await fileHandle.getFile();
 				if (currentFile.lastModified > lastModifiedTime) {
 					if (autoReloadEnabled) {
@@ -122,6 +124,7 @@
 
 	async function reloadWatchedFile() {
 		if (!fileHandle) return;
+		// @ts-ignore - Experimental File System API
 		const file = await fileHandle.getFile();
 		const success = await handleSaveFileUpload(file, true); // Silent load
 
@@ -145,8 +148,10 @@
 			return;
 		}
 
+		// @ts-ignore - Experimental File System API
 		if (window.showOpenFilePicker) {
 			try {
+				// @ts-ignore - Experimental File System API
 				const [handle] = await window.showOpenFilePicker({
 					types: [
 						{
@@ -155,6 +160,7 @@
 						}
 					]
 				});
+				// @ts-ignore - Experimental File System API
 				const file = await handle.getFile();
 				if (await handleSaveFileUpload(file, false)) {
 					await watchFileHandle(handle);
@@ -164,7 +170,7 @@
 			}
 		} else {
 			// Fallback for browsers without File System Access API (like Firefox)
-			document.getElementById('fallback-file-input').click();
+			document.getElementById('fallback-file-input')?.click();
 		}
 	}
 
@@ -208,6 +214,7 @@
 					try {
 						const handle = await item.getAsFileSystemHandle();
 						if (handle && handle.kind === 'file') {
+							// @ts-ignore - Experimental File System API
 							const file = await handle.getFile();
 							if (await handleSaveFileUpload(file, false)) {
 								await watchFileHandle(handle);

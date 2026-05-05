@@ -1,5 +1,26 @@
-<!-- src/routes/calculator/+page.svelte -->
 <script>
+	/**
+	 * @typedef {Object} LoadoutSource
+	 * @property {string} id
+	 * @property {string} name
+	 * @property {string} type
+	 * @property {any} data
+	 * @property {string[]} pics
+	 * @property {number} activeCount
+	 * @property {boolean} isStackable
+	 * @property {number} maxCount
+	 * @property {string} [category]
+	 */
+
+	/**
+	 * @typedef {Object} Loadout
+	 * @property {number} id
+	 * @property {string} name
+	 * @property {LoadoutSource | null} heldWeapon
+	 * @property {LoadoutSource[]} independents
+	 * @property {LoadoutSource[]} modifiers
+	 */
+
 	import { gameState } from '$lib/game.svelte.js';
 	import { tiles, items, employees, passiveMap } from '$lib/database.js';
 	import { formatLargeNumber } from '$lib/utils.js';
@@ -138,10 +159,12 @@
 		})
 	);
 
+	/** @type {Loadout[]} */
+	let typedLoadouts = $derived(gameState.calculatorLoadouts);
+
 	// --- LOADOUT BUILDER STATE ---
 	let activeLoadout = $derived(
-		gameState.calculatorLoadouts.find((l) => l.id === gameState.calculatorActiveLoadoutId) ||
-			gameState.calculatorLoadouts[0]
+		typedLoadouts.find((l) => l.id === gameState.calculatorActiveLoadoutId) || typedLoadouts[0]
 	);
 
 	let activePassiveKeys = $derived.by(() => {
@@ -157,6 +180,17 @@
 		return keys;
 	});
 
+	/**
+	 * @param {LoadoutSource[]} sourceArray
+	 * @param {string} sourceId
+	 * @returns {LoadoutSource}
+	 */
+	function getActiveRef(sourceArray, sourceId) {
+		const found = sourceArray.find((s) => s.id === sourceId);
+		if (!found) throw new Error('Source must exist when rendered as active');
+		return found;
+	}
+
 	let nonZeroPassives = $derived.by(() => {
 		return Object.entries(gameState.passives)
 			.filter(([k, v]) => v > 0)
@@ -166,28 +200,26 @@
 	function addLoadout() {
 		gameState.calculatorLoadoutCounter++;
 		const newId = gameState.calculatorLoadoutCounter;
-		gameState.calculatorLoadouts.push({
+		typedLoadouts.push({
 			id: newId,
 			name: `Loadout ${newId}`,
 			heldWeapon: null,
-			independents: [],
-			modifiers: []
+			independents: /** @type {any[]} */ [],
+			modifiers: /** @type {any[]} */ []
 		});
 		gameState.calculatorActiveLoadoutId = newId;
 	}
 
 	function removeLoadout(id) {
-		if (gameState.calculatorLoadouts.length === 1) return;
-		gameState.calculatorLoadouts = gameState.calculatorLoadouts.filter((l) => l.id !== id);
+		if (typedLoadouts.length === 1) return;
+		typedLoadouts = typedLoadouts.filter((l) => l.id !== id);
 		if (gameState.calculatorActiveLoadoutId === id) {
-			gameState.calculatorActiveLoadoutId = gameState.calculatorLoadouts[0].id;
+			gameState.calculatorActiveLoadoutId = typedLoadouts[0].id;
 		}
 	}
 
 	function toggleItemInLoadout(source) {
-		const loadout = gameState.calculatorLoadouts.find(
-			(l) => l.id === gameState.calculatorActiveLoadoutId
-		);
+		const loadout = typedLoadouts.find((l) => l.id === gameState.calculatorActiveLoadoutId);
 		if (!loadout) return;
 
 		const sourceClone = { ...source };
@@ -298,7 +330,7 @@
 					<span class="theme-text-muted font-bold uppercase tracking-wider text-sm mr-2 shrink-0"
 						>Loadouts:</span
 					>
-					{#each gameState.calculatorLoadouts as loadout}
+					{#each typedLoadouts as loadout}
 						<div
 							class="flex items-center theme-surface theme-surface-hover rounded-lg border {gameState.calculatorActiveLoadoutId ===
 							loadout.id
@@ -314,7 +346,7 @@
 							>
 								{loadout.name}
 							</button>
-							{#if gameState.calculatorLoadouts.length > 1}
+							{#if typedLoadouts.length > 1}
 								<button
 									class="px-2 py-2 theme-text-muted hover:text-red-400"
 									onclick={() => removeLoadout(loadout.id)}>✕</button
@@ -376,7 +408,7 @@
 													: 'theme-text-muted'}">{source.name}</span
 											>
 											{#if isSourceActive(source)}
-												{@const activeRef = activeLoadout.modifiers.find((s) => s.id === source.id)}
+												{@const activeRef = getActiveRef(activeLoadout.modifiers, source.id)}
 												{#if source.isStackable}
 													<div
 														class="mt-0.5 flex items-center gap-1"
@@ -448,9 +480,7 @@
 													: 'theme-text-muted'}">{source.name}</span
 											>
 											{#if isSourceActive(source)}
-												{@const activeRef = activeLoadout.independents.find(
-													(s) => s.id === source.id
-												)}
+												{@const activeRef = getActiveRef(activeLoadout.independents, source.id)}
 												{#if source.isStackable}
 													<div
 														class="mt-0.5 flex items-center gap-1"
@@ -645,7 +675,7 @@
 						</tr>
 					</thead>
 					<tbody class="text-sm divide-y divide-gray-700">
-						{#each gameState.calculatorLoadouts as loadout}
+						{#each typedLoadouts as loadout}
 							{@const rowDPS = calculateLoadoutDPS(loadout, gameState)}
 							{@const maxTime = gameState.secondsPerRound || 300}
 							{@const isEditing = gameState.calculatorActiveLoadoutId === loadout.id}

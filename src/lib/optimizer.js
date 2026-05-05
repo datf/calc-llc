@@ -46,6 +46,7 @@ export function formatEmployeeName(id) {
 export function getMemoizedItemDPS(id, isEmployee, items, employees, gameState) {
 	if (dpsCache.has(id)) return dpsCache.get(id);
 
+	/** @type {{ independents: any[], modifiers: any[], heldWeapon: any }} */
 	let mockLoadout = { independents: [], modifiers: [], heldWeapon: null };
 
 	if (isEmployee) {

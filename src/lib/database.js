@@ -1,4 +1,21 @@
 import professionsRaw from '$lib/data/professions.json';
+/**
+ * @typedef {Object} GameItem
+ * @property {string} itemID - The unique identifier.
+ * @property {string} itemName - The human-readable name.
+ * @property {string} itemType - Category of the item (e.g., 'pickaxe', 'bomb').
+ * @property {string} itemPath - Path used in the game engine mentioned in the save files.
+ * @property {boolean|string} [itemUnlocked] - Whether it is unlocked by default.
+ * @property {string} [picB64] - Base64 image string.
+ * @property {bigint} [itemBuyPrice] - Cost to purchase (Parsed to BigInt).
+ * @property {bigint} [itemSellPrice] - Value when sold (Parsed to BigInt).
+ * @property {bigint} [Strength] - Used in pickaxe formulas.
+ * @property {bigint} [damage] - Used in standard weapon formulas.
+ * @property {bigint} [bullet_damage] - Used in gun formulas.
+ * @property {number} [cooldown_time] - Attack speed.
+ * @property {number} [cooldown_secs] - Magic speed.
+ * @property {number} [bullet_count] - Number of projectiles.
+ */
 import itemsRaw from '$lib/data/items.json';
 import itemOrderRaw from '$lib/data/items_sorted.json';
 import employeesRaw from '$lib/data/employees.json';
@@ -67,6 +84,7 @@ function parseBigInts(item) {
 // 1. FIXED PROFESSION KEY: Map using p.profession_id instead of p.name
 export const professions = new Map(professionsRaw.map((p) => [p.profession_id, parseBigInts(p)]));
 
+/** @type {Map<string, GameItem>} */
 export const items = new Map(sortedItemsRaw.map((e) => [e.itemID, parseBigInts(e)]));
 
 export const employees = new Map(employeesRaw.map((e) => [e.employee_id, parseBigInts(e)]));

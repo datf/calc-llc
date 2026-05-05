@@ -7,7 +7,7 @@
 
 	onMount(() => {
 		// Once mounted in the browser, check if the API is actually supported
-		supportsFileSystemAPI = window.showOpenFilePicker !== undefined;
+		supportsFileSystemAPI = /** @type {any} */ (window).showOpenFilePicker !== undefined;
 	});
 </script>
 
