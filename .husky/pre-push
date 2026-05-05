@@ -1,0 +1,4 @@
+echo "Running type checks and tests inside container..."
+
+podman compose exec svelte-app pnpm run check
+podman compose exec svelte-app pnpm run test:run

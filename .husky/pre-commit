@@ -1,0 +1,2 @@
+echo "Running Prettier inside container..."
+podman compose exec svelte-app pnpm exec lint-staged
