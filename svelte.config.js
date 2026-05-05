@@ -7,8 +7,8 @@ const config = {
 	preprocess: vitePreprocess(),
 	kit: {
 		adapter: adapter({
-			// Fallback enables SPA mode
-			fallback: 'index.html',
+			// Fallback enables SPA mode and fix GH pages 404'ing
+			fallback: '404.html',
 			pages: 'build',
 			assets: 'build',
 			precompress: false,
