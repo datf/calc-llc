@@ -11,8 +11,6 @@
   const IGNORED_TYPES = ["mining_whistle", "ladder", "collector_whistle", "platform", "gravity_enhancer", "teleporter"];
   const INDEPENDENT_TYPES = ["poison_gun", "bomb", "flamethrower", "drill", "mortar_gun", "roundhouse_kick", "jet"];
   const MODIFIER_TYPES = ["water_gun", "water_staff"];
-
-  // Items that act as binary effects or single-use global cooldowns
   const NON_STACKABLE_TYPES = ["roundhouse_kick", "poison_gun", "poison_staff", "flamethrower", "jet", "water_gun", "water_staff"];
 
   function formatEmployeeName(id) {
@@ -32,7 +30,6 @@
       if (count > 0) {
         const itemObj = items.get(itemId);
         if (itemObj && itemObj.itemType && !IGNORED_TYPES.includes(itemObj.itemType)) {
-
           const isStackable = !NON_STACKABLE_TYPES.includes(itemObj.itemType);
 
           const sourceData = {
@@ -60,7 +57,6 @@
     for (const [empId, count] of Object.entries(gameState.hiredEmployees)) {
       if (count > 0n) {
         const empObj = employees.get(empId);
-
         if (empObj && empObj.type === "0") {
           let compositePics = [];
           if (empObj.legs_texture_base64) compositePics.push(empObj.legs_texture_base64);
@@ -68,7 +64,6 @@
           if (empObj.head_texture_base64) compositePics.push(empObj.head_texture_base64);
 
           let weaponStrength = 0;
-
           if (empObj.equipment_itemID) {
             const weaponObj = items.get(empObj.equipment_itemID);
             if (weaponObj) {
@@ -95,8 +90,7 @@
     return { heldWeapons, independentSources, modifiers };
   });
 
-  // --- TABLE FILTERS (Persisted in gameState) ---
-
+  // --- TABLE FILTERS ---
   function toggleLayerFilter(layer) {
     if (gameState.calculatorHiddenLayers.includes(layer)) {
       gameState.calculatorHiddenLayers = gameState.calculatorHiddenLayers.filter(l => l !== layer);
@@ -167,11 +161,7 @@
   let nonZeroPassives = $derived.by(() => {
     return Object.entries(gameState.passives)
       .filter(([k, v]) => v > 0)
-      .map(([k, v]) => ({
-        key: k,
-        name: k.split('_').join(' '),
-        value: v
-      }));
+      .map(([k, v]) => ({ key: k, name: k.split('_').join(' '), value: v }));
   });
 
   function addLoadout() {
@@ -242,16 +232,194 @@
 
   function getTimeToDestroyInfo(tile, dps, maxTime) {
     if (dps === 0) return { text: "∞", color: "theme-text-muted" };
-
     const seconds = Number(tile.health) / dps;
+    if (seconds > maxTime) return { text: `>${maxTime}s`, color: "text-red-500" };
+    else if (seconds > maxTime / 2) return { text: `${seconds.toFixed(2)}s`, color: "text-orange-400" };
+    else return { text: `${seconds.toFixed(2)}s`, color: "theme-text-accent" };
+  }
 
-    if (seconds > maxTime) {
-      return { text: `>${maxTime}s`, color: "text-red-500" };
-    } else if (seconds > maxTime / 2) {
-      return { text: `${seconds.toFixed(2)}s`, color: "text-orange-400" };
+  // ==========================================
+  // --- UPGRADES CALCULATOR LOGIC ---
+  // ==========================================
+  let upgradeStrategy = $state('MAX_DPS');
+  let upgradeResults = $state([]);
+  let isCalculating = $state(false);
+
+  // DPS Memoization
+  const dpsCache = new Map();
+
+  function getMemoizedItemDPS(id, isEmployee = false) {
+    if (dpsCache.has(id)) return dpsCache.get(id);
+
+    let mockLoadout = { independents: [], modifiers: [], heldWeapon: null };
+
+    if (isEmployee) {
+      const emp = employees.get(id);
+      if (emp) {
+        mockLoadout.independents.push({
+          type: 'employee',
+          data: { ...emp, weapon_strength: Number(items.get(emp.equipment_itemID)?.Strength || 0) },
+          activeCount: 1
+        });
+      }
     } else {
-      return { text: `${seconds.toFixed(2)}s`, color: "theme-text-accent" };
+      const item = items.get(id);
+      if (item && !IGNORED_TYPES.includes(item.itemType)) {
+        const sourceData = { type: 'equipment', data: item, activeCount: 1 };
+        if (MODIFIER_TYPES.includes(item.itemType) || item.itemType.includes("water")) {
+          mockLoadout.modifiers.push(sourceData);
+        } else if (INDEPENDENT_TYPES.includes(item.itemType)) {
+          mockLoadout.independents.push(sourceData);
+        } else {
+          mockLoadout.heldWeapon = sourceData;
+        }
+      }
     }
+
+    const dps = calculateLoadoutDPS(mockLoadout, gameState);
+    dpsCache.set(id, dps);
+    return dps;
+  }
+
+  function calculateUpgrades() {
+    isCalculating = true;
+    
+    setTimeout(() => {
+      let totalSellValue = 0;
+      const inventoryItems = [];
+      const shopItems = [];
+
+      // 1. Calculate max capacity based on cash + sellable inventory
+      for (const [id, count] of Object.entries(gameState.inventory)) {
+        if (count > 0) {
+          const item = items.get(id);
+          if (item && item.itemSellPrice) {
+            const sellPriceNum = Number(item.itemSellPrice);
+            totalSellValue += (sellPriceNum * Number(count));
+            for (let i = 0; i < count; i++) {
+              inventoryItems.push({ ...item, refId: id, weight: sellPriceNum, isOwned: true, isEmployee: false });
+            }
+          }
+        }
+      }
+
+      // active employees -> inventory representation
+      for (const [id, count] of Object.entries(gameState.hiredEmployees)) {
+        if (count > 0n) {
+          const emp = employees.get(id);
+          if (emp && emp.price) { 
+            const sellValue = Math.floor(Number(emp.price) * 0.5); 
+            totalSellValue += (sellValue * Number(count));
+            for(let i=0; i < Number(count); i++) {
+              inventoryItems.push({ ...emp, name: formatEmployeeName(emp.employee_id), refId: id, weight: sellValue, isOwned: true, isEmployee: true });
+            }
+          }
+        }
+      }
+
+      const maxCapacity = Math.floor(Number(gameState.cash || 0) + totalSellValue);
+
+      // 2. Filter unaffordable shop items
+      for (const [id, item] of items.entries()) {
+        const buyPriceNum = Number(item.itemBuyPrice || Infinity);
+        if (buyPriceNum <= maxCapacity && !IGNORED_TYPES.includes(item.itemType)) {
+          shopItems.push({ ...item, refId: id, weight: buyPriceNum, isOwned: false, isEmployee: false });
+        }
+      }
+
+      // Assign values based on strategy
+      const candidates = [...shopItems, ...inventoryItems].map(c => {
+        let value = 0;
+        if (upgradeStrategy === 'MAX_DPS') {
+          value = getMemoizedItemDPS(c.refId, c.isEmployee);
+        } else if (upgradeStrategy === 'COLLECTION') {
+          value = c.isOwned ? 1 : 100;
+        } else {
+          value = Math.random() * 10; // Placeholder for Quests weighting
+        }
+        return { ...c, value };
+      }).filter(c => c.value > 0);
+
+      // 3. 0/1 Knapsack Execution
+      // Scale down constraints to prevent Out of Memory errors in large economies
+      const scaleFactor = Math.max(1, Math.floor(maxCapacity / 50000)); 
+      const W = Math.floor(maxCapacity / scaleFactor);
+      
+      const dp = new Float32Array(W + 1);
+      const keep = Array.from({ length: candidates.length }, () => new Uint8Array(W + 1));
+
+      for (let i = 0; i < candidates.length; i++) {
+        const wt = Math.ceil(candidates[i].weight / scaleFactor);
+        const val = candidates[i].value;
+        if (wt <= 0) continue;
+
+        for (let w = W; w >= wt; w--) {
+          if (dp[w - wt] + val > dp[w]) {
+            dp[w] = dp[w - wt] + val;
+            keep[i][w] = 1;
+          }
+        }
+      }
+
+      // 4. Backtrack Optimal Path
+      let remainingW = W;
+      const optimalSelection = [];
+      for (let i = candidates.length - 1; i >= 0; i--) {
+        if (keep[i] && keep[i][remainingW] === 1) {
+          optimalSelection.push(candidates[i]);
+          remainingW -= Math.ceil(candidates[i].weight / scaleFactor);
+        }
+      }
+
+      // 5. Structure the Actions (Buy / Sell / Keep)
+      const toBuy = optimalSelection.filter(i => !i.isOwned);
+      
+      const keptIds = [];
+      optimalSelection.filter(i => i.isOwned).forEach(i => keptIds.push(i.refId));
+      
+      let tempInv = [...inventoryItems];
+      keptIds.forEach(kId => {
+          const idx = tempInv.findIndex(t => t.refId === kId);
+          if(idx !== -1) tempInv.splice(idx, 1);
+      });
+      const toSell = tempInv; // Whats not kept is sold
+
+      const groupItems = (arr, isBuy) => {
+          const map = new Map();
+          arr.forEach(i => {
+              const key = i.refId;
+              const price = isBuy ? Number(i.itemBuyPrice || 0) : i.weight;
+              if (map.has(key)) {
+                  const entry = map.get(key);
+                  entry.qty++;
+                  entry.total += price;
+              } else {
+                  map.set(key, { 
+                    name: i.itemName || i.name, 
+                    qty: 1, 
+                    total: price, 
+                    pics: [i.picB64 || i.head_texture_base64] 
+                  });
+              }
+          });
+          return Array.from(map.values());
+      };
+
+      // Set Up Options Array
+      upgradeResults = [{
+          id: 1,
+          projectedValue: dp[W],
+          buy: { items: groupItems(toBuy, true), totalSpent: toBuy.reduce((sum, i) => sum + Number(i.itemBuyPrice || 0), 0) },
+          sell: { items: groupItems(toSell, false), totalEarned: toSell.reduce((sum, i) => sum + i.weight, 0) },
+          quests: upgradeStrategy === 'QUESTS' ? ["Complete 'The Deep Dig' for +500g"] : []
+      }];
+
+      // Mock options 2 and 3 for UI demonstration
+      upgradeResults.push({...upgradeResults[0], id: 2, projectedValue: dp[W] * 0.9, buy: {items:[], totalSpent:0}});
+      upgradeResults.push({...upgradeResults[0], id: 3, projectedValue: dp[W] * 0.75, sell: {items:[], totalEarned:0}});
+
+      isCalculating = false;
+    }, 50);
   }
 </script>
 
@@ -277,8 +445,6 @@
     {#if activeTab === 'power'}
       <!-- BUILDER UI -->
       <div class="mb-8 theme-surface border theme-border rounded-xl overflow-hidden">
-
-        <!-- Loadout Selectors -->
         <div class="flex items-center gap-2 p-4 var(--bg-main) border-b theme-border overflow-x-auto">
           <span class="theme-text-muted font-bold uppercase tracking-wider text-sm mr-2 shrink-0">Loadouts:</span>
           {#each gameState.calculatorLoadouts as loadout}
@@ -296,7 +462,6 @@
           </button>
         </div>
 
-        <!-- Inventory Palette -->
         <div class="p-6">
           <p class="text-sm theme-text-muted mb-4">Click items to toggle them for <strong class="theme-text-accent">{activeLoadout.name}</strong>. Adjust quantities using the inputs.</p>
 
@@ -414,58 +579,40 @@
 
       <!-- TABLE FILTERS -->
       <div class="mb-4 theme-surface border theme-border rounded-xl p-4">
-
-        <!-- Layer Filter -->
         <div class="mb-4">
           <h3 class="text-xs font-bold theme-text-muted mb-2 uppercase tracking-wider">Filter by Layer</h3>
           <div class="flex flex-wrap gap-2">
             {#each layerOptions as layer}
-              <button
-                onclick={() => toggleLayerFilter(layer.name)}
-                class="flex items-center gap-1.5 px-2 py-1 rounded border text-xs font-bold select-none {gameState.calculatorHiddenLayers.includes(layer.name) ? 'var(--bg-main) theme-border theme-text-muted opacity-50' : 'theme-surface theme-surface-hover theme-border theme-text hover:var(--border-main) hover:border-gray-400'}"
-              >
-                {#if layer.pic}
-                  <img src={layer.pic} alt={layer.name} class="w-4 h-4 rendering-pixelated object-contain" />
-                {/if}
+              <button onclick={() => toggleLayerFilter(layer.name)} class="flex items-center gap-1.5 px-2 py-1 rounded border text-xs font-bold select-none {gameState.calculatorHiddenLayers.includes(layer.name) ? 'var(--bg-main) theme-border theme-text-muted opacity-50' : 'theme-surface theme-surface-hover theme-border theme-text hover:var(--border-main) hover:border-gray-400'}">
+                {#if layer.pic}<img src={layer.pic} alt={layer.name} class="w-4 h-4 rendering-pixelated object-contain" />{/if}
                 <span class="capitalize">{layer.name}</span>
               </button>
             {/each}
           </div>
         </div>
-
-        <!-- Material Filter -->
         <div>
           <h3 class="text-xs font-bold theme-text-muted mb-2 uppercase tracking-wider">Filter by Material</h3>
           <div class="flex flex-wrap gap-2">
             {#each materialOptions as mat}
-              <button
-                onclick={() => toggleMaterialFilter(mat.name)}
-                class="flex items-center gap-1.5 px-2 py-1 rounded border text-xs font-bold select-none {gameState.calculatorHiddenMaterials.includes(mat.name) ? 'var(--bg-main) theme-border theme-text-muted opacity-50' : 'theme-surface theme-surface-hover theme-border theme-text hover:var(--border-main) hover:border-gray-400'}"
-              >
-                {#if mat.pic}
-                  <img src={mat.pic} alt={mat.name} class="w-4 h-4 rendering-pixelated object-contain" />
-                {/if}
+              <button onclick={() => toggleMaterialFilter(mat.name)} class="flex items-center gap-1.5 px-2 py-1 rounded border text-xs font-bold select-none {gameState.calculatorHiddenMaterials.includes(mat.name) ? 'var(--bg-main) theme-border theme-text-muted opacity-50' : 'theme-surface theme-surface-hover theme-border theme-text hover:var(--border-main) hover:border-gray-400'}">
+                {#if mat.pic}<img src={mat.pic} alt={mat.name} class="w-4 h-4 rendering-pixelated object-contain" />{/if}
                 <span class="capitalize">{mat.name}</span>
               </button>
             {/each}
           </div>
         </div>
-
       </div>
 
-      <!-- INVERTED DATA TABLE (Rows = Loadouts, Cols = Tiles) -->
+      <!-- INVERTED DATA TABLE -->
       <div class="overflow-x-auto rounded-lg border theme-border">
         <table class="w-full text-left border-collapse">
           <thead>
             <tr class="theme-surface theme-text text-sm uppercase tracking-wider">
               <th class="p-4 border-b border-r theme-border min-w-[280px] sticky left-0 theme-surface z-20 shadow-[2px_0_5px_rgba(0,0,0,0.3)]">Loadout</th>
-
               {#each filteredTiles as tile}
                 <th class="p-4 border-b theme-border min-w-[120px]">
                   <div class="flex items-center gap-2">
-                    {#if tile.pics_in_rock_base64 && tile.pics_in_rock_base64.length > 0}
-                      <img src={tile.pics_in_rock_base64[0]} alt={tile.resource} class="w-6 h-6 rendering-pixelated object-contain" />
-                    {/if}
+                    {#if tile.pics_in_rock_base64?.length > 0}<img src={tile.pics_in_rock_base64[0]} alt={tile.resource} class="w-6 h-6 rendering-pixelated object-contain" />{/if}
                     <div>
                       <div class="font-bold leading-tight capitalize">{tile.resource}</div>
                       <div class="text-[10px] theme-text-muted leading-tight capitalize">{tile.layer}</div>
@@ -473,10 +620,7 @@
                   </div>
                 </th>
               {/each}
-
-              {#if filteredTiles.length === 0}
-                <th class="p-4 border-b theme-border theme-text-muted italic font-normal">No tiles match current filters.</th>
-              {/if}
+              {#if filteredTiles.length === 0}<th class="p-4 border-b theme-border theme-text-muted italic font-normal">No tiles match current filters.</th>{/if}
             </tr>
           </thead>
           <tbody class="text-sm divide-y divide-gray-700">
@@ -486,88 +630,45 @@
               {@const isEditing = gameState.calculatorActiveLoadoutId === loadout.id}
 
               <tr class="hover:var(--border-main)/50 {isEditing ? 'theme-surface theme-surface-hover/80' : ''}">
-
-                <!-- Loadout Info (Sticky Left) -->
                 <td class="p-4 border-r theme-border sticky left-0 theme-surface theme-surface-hover z-10 shadow-[2px_0_5px_rgba(0,0,0,0.3)]">
                   <div class="flex justify-between items-start mb-2">
-                    <button
-                      class="font-bold flex items-center gap-2 focus:outline-none {isEditing ? 'theme-text-accent' : 'theme-text hover:theme-text'}"
-                      onclick={() => gameState.calculatorActiveLoadoutId = loadout.id}
-                      title="Click to edit this loadout"
-                    >
-                      {loadout.name}
-                    </button>
-                    <div class="text-xs font-mono theme-text theme-surface border theme-border px-2 py-1 rounded">
-                      {formatDPS(rowDPS)}
-                    </div>
+                    <button class="font-bold flex items-center gap-2 focus:outline-none {isEditing ? 'theme-text-accent' : 'theme-text hover:theme-text'}" onclick={() => gameState.calculatorActiveLoadoutId = loadout.id}>{loadout.name}</button>
+                    <div class="text-xs font-mono theme-text theme-surface border theme-border px-2 py-1 rounded">{formatDPS(rowDPS)}</div>
                   </div>
-
-                  <!-- Mini icons of the loadout contents -->
                   <div class="flex flex-wrap gap-2 pt-1">
                     {#if loadout.heldWeapon}
                       <div class="relative w-6 h-6 border theme-border-hover var(--bg-main) rounded" title={loadout.heldWeapon.name}>
-                        {#each loadout.heldWeapon.pics as pic}
-                          <img src={pic} alt="wep" class="absolute inset-0 w-full h-full object-contain rendering-pixelated" />
-                        {/each}
+                        {#each loadout.heldWeapon.pics as pic}<img src={pic} alt="wep" class="absolute inset-0 w-full h-full object-contain rendering-pixelated" />{/each}
                       </div>
                     {/if}
-
                     {#each loadout.modifiers as mod}
                       <div class="relative w-6 h-6 border border-blue-500 var(--bg-main) rounded" title={mod.name}>
-                        {#each mod.pics as pic}
-                          <img src={pic} alt="mod" class="absolute inset-0 w-full h-full object-contain rendering-pixelated" />
-                        {/each}
-                        {#if mod.activeCount > 1}
-                          <span class="absolute -bottom-2 -right-2 theme-surface theme-text text-[9px] font-bold px-1 rounded-full border theme-border">x{formatLargeNumber(mod.activeCount)}</span>
-                        {/if}
+                        {#each mod.pics as pic}<img src={pic} alt="mod" class="absolute inset-0 w-full h-full object-contain rendering-pixelated" />{/each}
+                        {#if mod.activeCount > 1}<span class="absolute -bottom-2 -right-2 theme-surface theme-text text-[9px] font-bold px-1 rounded-full border theme-border">x{formatLargeNumber(mod.activeCount)}</span>{/if}
                       </div>
                     {/each}
-
                     {#each loadout.independents as ind}
                       <div class="relative w-6 h-6 border border-green-500 var(--bg-main) rounded" title={ind.name}>
-                        {#each ind.pics as pic}
-                          <img src={pic} alt="ind" class="absolute inset-0 w-full h-full object-contain rendering-pixelated" />
-                        {/each}
-                        {#if ind.activeCount > 1}
-                          <span class="absolute -bottom-2 -right-2 theme-surface theme-text text-[9px] font-bold px-1 rounded-full border theme-border">x{formatLargeNumber(ind.activeCount)}</span>
-                        {/if}
+                        {#each ind.pics as pic}<img src={pic} alt="ind" class="absolute inset-0 w-full h-full object-contain rendering-pixelated" />{/each}
+                        {#if ind.activeCount > 1}<span class="absolute -bottom-2 -right-2 theme-surface theme-text text-[9px] font-bold px-1 rounded-full border theme-border">x{formatLargeNumber(ind.activeCount)}</span>{/if}
                       </div>
                     {/each}
-
-                    {#if !loadout.heldWeapon && loadout.modifiers.length===0 && loadout.independents.length===0}
-                      <span class="text-xs theme-text-muted italic mt-1">Empty Loadout</span>
-                    {/if}
                   </div>
                 </td>
 
-                <!-- Tile Calculations -->
                 {#each filteredTiles as tile}
                   {@const ttk = getTimeToDestroyInfo(tile, rowDPS, maxTime)}
                   <td class="p-4 align-middle border-r theme-border last:border-r-0 text-center">
                     <div class="relative group cursor-help inline-block w-full">
                       <div class="font-mono font-bold {ttk.color} text-base">{ttk.text}</div>
-
-                      <!-- Yield Tooltip -->
                       <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center theme-surface border theme-border px-3 py-2 rounded shadow-[0_0_10px_rgba(0,0,0,0.5)] z-50 whitespace-nowrap pointer-events-none">
                         <span class="text-[9px] theme-text-muted uppercase tracking-wider mb-1">Yield / Block</span>
-                        <span class="font-mono theme-text-accent font-bold text-sm">
-                          {#if tile.min_drop === tile.max_drop}
-                            {formatLargeNumber(tile.min_drop)}
-                          {:else}
-                            {formatLargeNumber(tile.min_drop)} - {formatLargeNumber(tile.max_drop)}
-                          {/if}
-                        </span>
-                        <!-- Bottom Arrow -->
+                        <span class="font-mono theme-text-accent font-bold text-sm">{tile.min_drop === tile.max_drop ? formatLargeNumber(tile.min_drop) : `${formatLargeNumber(tile.min_drop)} - ${formatLargeNumber(tile.max_drop)}`}</span>
                         <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-600"></div>
                       </div>
                     </div>
                   </td>
                 {/each}
-
-                {#if filteredTiles.length === 0}
-                  <td class="p-4 theme-surface/50"></td>
-                {/if}
-
               </tr>
             {/each}
           </tbody>
@@ -576,12 +677,119 @@
 
     {:else}
       <!-- PROPOSED UPGRADES TAB -->
-      <div class="text-center py-20">
-        <h3 class="text-2xl font-bold theme-text-muted mb-2">Algorithm processing...</h3>
-        <p class="theme-text-muted">Upgrade suggestions logic will go here!</p>
+      <div class="p-4">
+        
+        <div class="flex flex-col md:flex-row gap-4 items-center justify-between bg-black/20 p-4 border theme-border rounded-xl mb-6">
+          <div class="flex items-center gap-3">
+            <span class="font-bold theme-text-muted text-sm uppercase tracking-wider">Strategy:</span>
+            <select bind:value={upgradeStrategy} class="bg-black/40 border theme-border theme-text px-4 py-2 rounded focus:theme-border-hover outline-none font-bold">
+              <option value="MAX_DPS">Maximize DPS</option>
+              <option value="COLLECTION">Optimize for Collection</option>
+              <option value="QUESTS">Suggest Quests</option>
+            </select>
+          </div>
+          <button 
+            onclick={calculateUpgrades} 
+            disabled={isCalculating}
+            class="px-6 py-2 bg-yellow-600 hover:bg-yellow-500 text-black font-bold rounded shadow-[0_0_10px_rgba(202,138,4,0.4)] disabled:opacity-50 transition-colors"
+          >
+            {isCalculating ? 'Calculating...' : 'Re-calculate Upgrades'}
+          </button>
+        </div>
+
+        {#if upgradeResults.length > 0}
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {#each upgradeResults as option}
+              <div class="theme-surface border {option.id === 1 ? 'theme-border-hover shadow-[0_0_15px_rgba(255,215,0,0.1)]' : 'theme-border'} rounded-xl p-5 flex flex-col h-full">
+                
+                <div class="border-b theme-border pb-3 mb-4">
+                  <div class="flex justify-between items-center mb-1">
+                    <h3 class="text-lg font-bold {option.id === 1 ? 'theme-text-accent' : 'theme-text'}">Option {option.id}</h3>
+                    <span class="text-xs px-2 py-1 bg-black/40 rounded border theme-border font-mono">
+                      {formatDPS(option.projectedValue)}
+                    </span>
+                  </div>
+                  {#if option.id === 1}<p class="text-[10px] text-green-400 uppercase tracking-widest font-bold">Mathematical Optimal</p>{/if}
+                </div>
+
+                <div class="flex-grow space-y-4">
+                  <!-- Sell Section -->
+                  <div>
+                    <h4 class="text-xs font-bold text-red-400 mb-2 uppercase flex justify-between">
+                      <span>Items to Sell</span>
+                      <span>+{formatLargeNumber(option.sell.totalEarned)}g</span>
+                    </h4>
+                    {#if option.sell.items.length === 0}
+                      <p class="text-xs theme-text-muted italic">Nothing to sell.</p>
+                    {:else}
+                      <ul class="space-y-1">
+                        {#each option.sell.items as item}
+                          <li class="flex justify-between items-center text-xs bg-red-950/20 px-2 py-1 rounded border border-red-900/30">
+                            <span class="flex items-center gap-1.5 truncate">
+                              {#if item.pics[0]}<img src={item.pics[0]} alt="icon" class="w-4 h-4 rendering-pixelated object-contain"/>{/if}
+                              <span class="theme-text-muted">{item.qty}x</span> {item.name}
+                            </span>
+                            <span class="text-red-300 font-mono">+{formatLargeNumber(item.total)}g</span>
+                          </li>
+                        {/each}
+                      </ul>
+                    {/if}
+                  </div>
+
+                  <!-- Buy Section -->
+                  <div>
+                    <h4 class="text-xs font-bold text-green-400 mb-2 uppercase flex justify-between">
+                      <span>Items to Buy</span>
+                      <span>-{formatLargeNumber(option.buy.totalSpent)}g</span>
+                    </h4>
+                    {#if option.buy.items.length === 0}
+                      <p class="text-xs theme-text-muted italic">Nothing to buy.</p>
+                    {:else}
+                      <ul class="space-y-1">
+                        {#each option.buy.items as item}
+                          <li class="flex justify-between items-center text-xs bg-green-950/20 px-2 py-1 rounded border border-green-900/30">
+                            <span class="flex items-center gap-1.5 truncate">
+                              {#if item.pics[0]}<img src={item.pics[0]} alt="icon" class="w-4 h-4 rendering-pixelated object-contain"/>{/if}
+                              <span class="theme-text-muted">{item.qty}x</span> {item.name}
+                            </span>
+                            <span class="text-green-300 font-mono">-{formatLargeNumber(item.total)}g</span>
+                          </li>
+                        {/each}
+                      </ul>
+                    {/if}
+                  </div>
+
+                  <!-- Quests Section -->
+                  {#if option.quests.length > 0}
+                    <div>
+                      <h4 class="text-xs font-bold text-blue-400 mb-2 uppercase">Suggested Quests</h4>
+                      <ul class="space-y-1">
+                        {#each option.quests as quest}
+                          <li class="text-xs bg-blue-950/20 text-blue-200 px-2 py-1 rounded border border-blue-900/30">{quest}</li>
+                        {/each}
+                      </ul>
+                    </div>
+                  {/if}
+                </div>
+
+                <!-- Add to Loadout Button -->
+                <button 
+                  class="mt-6 w-full py-2 bg-black/40 hover:bg-black/60 border theme-border theme-text-muted hover:theme-text font-bold text-sm rounded transition-colors"
+                  onclick={() => alert('Logic to create a new loadout from these items will go here')}
+                >
+                  + Create New Loadout from Option {option.id}
+                </button>
+              </div>
+            {/each}
+          </div>
+        {:else}
+          <div class="text-center py-20 border border-dashed theme-border rounded-xl bg-black/10">
+            <h3 class="text-2xl font-bold theme-text-muted mb-2">Ready to analyze</h3>
+            <p class="theme-text-muted">Select a strategy and click calculate to view the best upgrade paths.</p>
+          </div>
+        {/if}
       </div>
     {/if}
-
   </div>
 </div>
 
