@@ -5,13 +5,13 @@
   import { formatLargeNumber } from '$lib/utils.js';
   import { calculateLoadoutDPS } from '$lib/calculator.js';
 
-  let activeTab = $state('power'); 
+  let activeTab = $state('power');
 
   // --- CATEGORIZATION ARRAYS ---
   const IGNORED_TYPES = ["mining_whistle", "ladder", "collector_whistle", "platform", "gravity_enhancer", "teleporter"];
   const INDEPENDENT_TYPES = ["poison_gun", "bomb", "flamethrower", "drill", "mortar_gun", "roundhouse_kick", "jet"];
-  const MODIFIER_TYPES = ["water_gun", "water_staff"]; 
-  
+  const MODIFIER_TYPES = ["water_gun", "water_staff"];
+
   // Items that act as binary effects or single-use global cooldowns
   const NON_STACKABLE_TYPES = ["roundhouse_kick", "poison_gun", "poison_staff", "flamethrower", "jet", "water_gun", "water_staff"];
 
@@ -27,19 +27,19 @@
     let heldWeapons = [];
     let independentSources = [];
     let modifiers = [];
-    
+
     for (const [itemId, count] of Object.entries(gameState.inventory)) {
       if (count > 0) {
         const itemObj = items.get(itemId);
         if (itemObj && itemObj.itemType && !IGNORED_TYPES.includes(itemObj.itemType)) {
-          
+
           const isStackable = !NON_STACKABLE_TYPES.includes(itemObj.itemType);
-          
+
           const sourceData = {
             id: `item_${itemId}`,
             name: itemObj.itemName || itemId,
             type: 'equipment',
-            data: itemObj, 
+            data: itemObj,
             pics: [itemObj.picB64],
             ownedCount: Number(count),
             isStackable: isStackable,
@@ -60,38 +60,38 @@
     for (const [empId, count] of Object.entries(gameState.hiredEmployees)) {
       if (count > 0n) {
         const empObj = employees.get(empId);
-        
+
         if (empObj && empObj.type === "0") {
           let compositePics = [];
           if (empObj.legs_texture_base64) compositePics.push(empObj.legs_texture_base64);
           if (empObj.torso_texture_base64) compositePics.push(empObj.torso_texture_base64);
           if (empObj.head_texture_base64) compositePics.push(empObj.head_texture_base64);
-          
-          let weaponStrength = 0; 
+
+          let weaponStrength = 0;
 
           if (empObj.equipment_itemID) {
             const weaponObj = items.get(empObj.equipment_itemID);
             if (weaponObj) {
               if (weaponObj.picB64) compositePics.push(weaponObj.picB64);
-              weaponStrength = Number(weaponObj.Strength || weaponObj.damage || 0); 
+              weaponStrength = Number(weaponObj.Strength || weaponObj.damage || 0);
             }
           }
 
           independentSources.push({
             id: `emp_${empId}`,
-            name: formatEmployeeName(empObj.employee_id), 
+            name: formatEmployeeName(empObj.employee_id),
             type: 'employee',
-            data: { ...empObj, weapon_strength: weaponStrength }, 
+            data: { ...empObj, weapon_strength: weaponStrength },
             pics: compositePics,
             category: 'independent',
             ownedCount: Number(count),
-            isStackable: true, 
+            isStackable: true,
             maxCount: Number(count)
           });
         }
       }
     }
-    
+
     return { heldWeapons, independentSources, modifiers };
   });
 
@@ -147,7 +147,7 @@
 
   // --- LOADOUT BUILDER STATE ---
   let activeLoadout = $derived(
-    gameState.calculatorLoadouts.find(l => l.id === gameState.calculatorActiveLoadoutId) 
+    gameState.calculatorLoadouts.find(l => l.id === gameState.calculatorActiveLoadoutId)
     || gameState.calculatorLoadouts[0]
   );
 
@@ -177,18 +177,18 @@
   function addLoadout() {
     gameState.calculatorLoadoutCounter++;
     const newId = gameState.calculatorLoadoutCounter;
-    gameState.calculatorLoadouts.push({ 
-      id: newId, 
-      name: `Loadout ${newId}`, 
-      heldWeapon: null, 
-      independents: [], 
-      modifiers: [] 
+    gameState.calculatorLoadouts.push({
+      id: newId,
+      name: `Loadout ${newId}`,
+      heldWeapon: null,
+      independents: [],
+      modifiers: []
     });
     gameState.calculatorActiveLoadoutId = newId;
   }
 
   function removeLoadout(id) {
-    if (gameState.calculatorLoadouts.length === 1) return; 
+    if (gameState.calculatorLoadouts.length === 1) return;
     gameState.calculatorLoadouts = gameState.calculatorLoadouts.filter(l => l.id !== id);
     if (gameState.calculatorActiveLoadoutId === id) {
       gameState.calculatorActiveLoadoutId = gameState.calculatorLoadouts[0].id;
@@ -237,12 +237,12 @@
   // --- MATH HOOKS ---
   function formatDPS(dps) {
     if (dps === 0) return "0 DPS";
-    return `${formatLargeNumber(Math.floor(dps))} DPS`; 
+    return `${formatLargeNumber(Math.floor(dps))} DPS`;
   }
 
   function getTimeToDestroyInfo(tile, dps, maxTime) {
     if (dps === 0) return { text: "∞", color: "theme-text-muted" };
-    
+
     const seconds = Number(tile.health) / dps;
 
     if (seconds > maxTime) {
@@ -256,7 +256,7 @@
 </script>
 
 <div class="page-wrapper page-wide">
-  
+
   <div class="mb-6 text-center">
     <h2 class="text-3xl md:text-4xl font-bold theme-text-accent tracking-tight mb-2">
       Strategy Calculator
@@ -273,11 +273,11 @@
   </div>
 
   <div class="theme-surface theme-surface-hover border theme-border rounded-b-xl p-6 shadow-2xl min-h-[60vh]">
-    
+
     {#if activeTab === 'power'}
       <!-- BUILDER UI -->
       <div class="mb-8 theme-surface border theme-border rounded-xl overflow-hidden">
-        
+
         <!-- Loadout Selectors -->
         <div class="flex items-center gap-2 p-4 var(--bg-main) border-b theme-border overflow-x-auto">
           <span class="theme-text-muted font-bold uppercase tracking-wider text-sm mr-2 shrink-0">Loadouts:</span>
@@ -299,7 +299,7 @@
         <!-- Inventory Palette -->
         <div class="p-6">
           <p class="text-sm theme-text-muted mb-4">Click items to toggle them for <strong class="theme-text-accent">{activeLoadout.name}</strong>. Adjust quantities using the inputs.</p>
-          
+
           <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <!-- Modifiers -->
             <div class="p-4 theme-surface theme-surface-hover/50 rounded-lg border border-blue-900/50">
@@ -407,20 +407,20 @@
                 {/if}
               </div>
             </div>
-            
+
           </div>
         </div>
       </div>
 
       <!-- TABLE FILTERS -->
       <div class="mb-4 theme-surface border theme-border rounded-xl p-4">
-        
+
         <!-- Layer Filter -->
         <div class="mb-4">
           <h3 class="text-xs font-bold theme-text-muted mb-2 uppercase tracking-wider">Filter by Layer</h3>
           <div class="flex flex-wrap gap-2">
             {#each layerOptions as layer}
-              <button 
+              <button
                 onclick={() => toggleLayerFilter(layer.name)}
                 class="flex items-center gap-1.5 px-2 py-1 rounded border text-xs font-bold select-none {gameState.calculatorHiddenLayers.includes(layer.name) ? 'var(--bg-main) theme-border theme-text-muted opacity-50' : 'theme-surface theme-surface-hover theme-border theme-text hover:var(--border-main) hover:border-gray-400'}"
               >
@@ -438,7 +438,7 @@
           <h3 class="text-xs font-bold theme-text-muted mb-2 uppercase tracking-wider">Filter by Material</h3>
           <div class="flex flex-wrap gap-2">
             {#each materialOptions as mat}
-              <button 
+              <button
                 onclick={() => toggleMaterialFilter(mat.name)}
                 class="flex items-center gap-1.5 px-2 py-1 rounded border text-xs font-bold select-none {gameState.calculatorHiddenMaterials.includes(mat.name) ? 'var(--bg-main) theme-border theme-text-muted opacity-50' : 'theme-surface theme-surface-hover theme-border theme-text hover:var(--border-main) hover:border-gray-400'}"
               >
@@ -459,7 +459,7 @@
           <thead>
             <tr class="theme-surface theme-text text-sm uppercase tracking-wider">
               <th class="p-4 border-b border-r theme-border min-w-[280px] sticky left-0 theme-surface z-20 shadow-[2px_0_5px_rgba(0,0,0,0.3)]">Loadout</th>
-              
+
               {#each filteredTiles as tile}
                 <th class="p-4 border-b theme-border min-w-[120px]">
                   <div class="flex items-center gap-2">
@@ -484,13 +484,13 @@
               {@const rowDPS = calculateLoadoutDPS(loadout, gameState)}
               {@const maxTime = gameState.secondsPerRound || 300}
               {@const isEditing = gameState.calculatorActiveLoadoutId === loadout.id}
-              
+
               <tr class="hover:var(--border-main)/50 {isEditing ? 'theme-surface theme-surface-hover/80' : ''}">
-                
+
                 <!-- Loadout Info (Sticky Left) -->
                 <td class="p-4 border-r theme-border sticky left-0 theme-surface theme-surface-hover z-10 shadow-[2px_0_5px_rgba(0,0,0,0.3)]">
                   <div class="flex justify-between items-start mb-2">
-                    <button 
+                    <button
                       class="font-bold flex items-center gap-2 focus:outline-none {isEditing ? 'theme-text-accent' : 'theme-text hover:theme-text'}"
                       onclick={() => gameState.calculatorActiveLoadoutId = loadout.id}
                       title="Click to edit this loadout"
@@ -501,7 +501,7 @@
                       {formatDPS(rowDPS)}
                     </div>
                   </div>
-                  
+
                   <!-- Mini icons of the loadout contents -->
                   <div class="flex flex-wrap gap-2 pt-1">
                     {#if loadout.heldWeapon}
@@ -511,7 +511,7 @@
                         {/each}
                       </div>
                     {/if}
-                    
+
                     {#each loadout.modifiers as mod}
                       <div class="relative w-6 h-6 border border-blue-500 var(--bg-main) rounded" title={mod.name}>
                         {#each mod.pics as pic}
@@ -546,7 +546,7 @@
                   <td class="p-4 align-middle border-r theme-border last:border-r-0 text-center">
                     <div class="relative group cursor-help inline-block w-full">
                       <div class="font-mono font-bold {ttk.color} text-base">{ttk.text}</div>
-                      
+
                       <!-- Yield Tooltip -->
                       <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center theme-surface border theme-border px-3 py-2 rounded shadow-[0_0_10px_rgba(0,0,0,0.5)] z-50 whitespace-nowrap pointer-events-none">
                         <span class="text-[9px] theme-text-muted uppercase tracking-wider mb-1">Yield / Block</span>
@@ -563,7 +563,7 @@
                     </div>
                   </td>
                 {/each}
-                
+
                 {#if filteredTiles.length === 0}
                   <td class="p-4 theme-surface/50"></td>
                 {/if}

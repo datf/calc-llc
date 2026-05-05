@@ -4,6 +4,7 @@
   import { gameState, GAME_OPTIONS } from '$lib/game.svelte.js';
   import { page } from '$app/stores';
   import { resolve } from '$app/paths';
+  import { setContext } from 'svelte';
   import { handleSaveFileUpload } from '$lib/saveHandler.js';
 
   const navLinks = [
@@ -84,6 +85,100 @@
     if (event.key === 'Enter') event.target.blur();
   }
 
+  // --- NEW: File System Watcher State ---
+  let fileHandle = $state(null);
+  let lastModifiedTime = $state(0);
+  let fileHasChanged = $state(false);
+  let autoReloadEnabled = $state(false);
+  let showReloadAnimation = $state(false);
+  let filePollInterval;
+
+  // Initialize the watcher for a new file handle
+  async function watchFileHandle(handle) {
+    fileHandle = handle;
+    const file = await handle.getFile();
+    lastModifiedTime = file.lastModified;
+    fileHasChanged = false;
+
+    if (filePollInterval) clearInterval(filePollInterval);
+
+    // Poll every 2 seconds
+    filePollInterval = setInterval(async () => {
+      try {
+        const currentFile = await fileHandle.getFile();
+        if (currentFile.lastModified > lastModifiedTime) {
+          if (autoReloadEnabled) {
+            await reloadWatchedFile();
+          } else {
+            fileHasChanged = true;
+          }
+        }
+      } catch (err) {
+        // Handle might be locked or permissions lost
+        console.warn("Could not check file status", err);
+      }
+    }, 2000);
+  }
+
+  async function reloadWatchedFile() {
+    if (!fileHandle) return;
+    const file = await fileHandle.getFile();
+    const success = await handleSaveFileUpload(file, true); // Silent load
+
+    if (success) {
+      lastModifiedTime = file.lastModified;
+      fileHasChanged = false;
+
+      // Trigger 3s animation
+      showReloadAnimation = true;
+      setTimeout(() => {
+        showReloadAnimation = false;
+      }, 3000);
+    }
+  }
+
+  // --- Header Load Handling ---
+  async function handleHeaderLoadClick() {
+    if (fileHasChanged && fileHandle) {
+      // If it's just the manual reload button
+      await reloadWatchedFile();
+      return;
+    }
+
+    if (window.showOpenFilePicker) {
+      try {
+        const [handle] = await window.showOpenFilePicker({
+          types: [{
+            description: 'Save Files',
+            accept: { 'application/json': ['.json', '.save'] }
+          }]
+        });
+        const file = await handle.getFile();
+        if (await handleSaveFileUpload(file, false)) {
+          await watchFileHandle(handle);
+        }
+      } catch (err) {
+        // User cancelled picker
+      }
+    } else {
+      // Fallback for browsers without File System Access API (like Firefox)
+      document.getElementById('fallback-file-input').click();
+    }
+  }
+
+  setContext('openFilePicker', handleHeaderLoadClick);
+
+  async function handleFallbackFileInput(e) {
+    const file = e.target.files[0];
+    if (file) {
+      await handleSaveFileUpload(file, false);
+      e.target.value = null;
+      // Note: We cannot poll standard Files, only Handles, so watcher resets
+      if (filePollInterval) clearInterval(filePollInterval);
+      fileHandle = null;
+    }
+  }
+
   // --- Drag and Drop Handlers ---
   function handleDragOver(e) {
     e.preventDefault();
@@ -106,18 +201,24 @@
     if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
       const item = e.dataTransfer.items[0];
       if (item.kind === 'file') {
-        const file = item.getAsFile();
-        await handleSaveFileUpload(file);
-      }
-    }
-  }
+        // Try getting the FileSystemHandle for watching
+        if (item.getAsFileSystemHandle) {
+          try {
+            const handle = await item.getAsFileSystemHandle();
+            if (handle && handle.kind === 'file') {
+              const file = await handle.getFile();
+              if (await handleSaveFileUpload(file, false)) {
+                await watchFileHandle(handle);
+              }
+              return;
+            }
+          } catch(err) { console.warn("Failed to get handle from drop", err); }
+        }
 
-  async function handleHeaderFileInput(e) {
-    const file = e.target.files[0];
-    if (file) {
-      await handleSaveFileUpload(file);
-      // Reset input so the same file can be uploaded again if needed
-      e.target.value = null;
+        // Fallback if handle fails or isn't supported
+        const file = item.getAsFile();
+        await handleSaveFileUpload(file, false);
+      }
     }
   }
 
@@ -139,8 +240,13 @@
   ondrop={handleDrop}
 >
 
+  {#if showReloadAnimation}
+    <div class="absolute top-20 left-1/2 -translate-x-1/2 z-[200] bg-green-600 text-white px-6 py-3 rounded-full shadow-lg font-bold transition-opacity animate-pulse">
+      Save Auto-Reloaded!
+    </div>
+  {/if}
+
   {#if isDragging}
-    <!-- Add pointer-events-none here to ensure the overlay cannot trigger dragleave -->
     <div class="absolute inset-0 z-[100] bg-black/60 flex items-center justify-center backdrop-blur-sm pointer-events-none">
       <div class="text-4xl font-bold text-white border-4 border-dashed border-white p-12 rounded-2xl pointer-events-none">
         Drop Save File Here
@@ -192,7 +298,7 @@
           - upcoming coal quota: {formattedQuota}
         </div>
 
-        <div class="flex gap-2">
+        <div class="flex gap-3 items-center mt-1">
           <button
             class="px-3 py-1 border theme-border rounded theme-surface-hover theme-text-muted"
             onclick={toggleTheme}
@@ -200,16 +306,36 @@
             {theme === "dark" ? "☀️ Light" : "🌑 Dark"}
           </button>
 
-          <!-- Header File Upload Button -->
-          <label class="px-3 py-1 border theme-border rounded theme-surface-hover theme-text-muted cursor-pointer">
-            📁 Load Save
-            <input
-              type="file"
-              accept=".json,.save"
-              class="hidden"
-              onchange={handleHeaderFileInput}
-            />
-          </label>
+          <button
+            class="px-3 py-1 border rounded font-semibold transition-colors flex items-center gap-1
+              {fileHasChanged ? 'bg-green-600 hover:bg-green-500 text-white border-green-700' : 'theme-border theme-surface-hover theme-text-muted'}"
+            onclick={handleHeaderLoadClick}
+          >
+            {#if fileHasChanged}
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Reload Save
+            {:else}
+              📁 Load Save
+            {/if}
+          </button>
+
+          <!-- Hidden fallback input -->
+          <input
+            id="fallback-file-input"
+            type="file"
+            accept=".json,.save"
+            class="hidden"
+            onchange={handleFallbackFileInput}
+          />
+
+          {#if fileHandle}
+            <label class="flex items-center gap-1 text-sm theme-text-muted cursor-pointer hover:theme-text">
+              <input type="checkbox" bind:checked={autoReloadEnabled} class="cursor-pointer" />
+              Auto-reload on change
+            </label>
+          {/if}
         </div>
       </div>
 
