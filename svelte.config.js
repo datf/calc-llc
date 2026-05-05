@@ -4,28 +4,28 @@ import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
-  preprocess: vitePreprocess(),
-  kit: {
-    adapter: adapter({
-      // Fallback enables SPA mode
-      fallback: 'index.html', 
-      pages: 'build',
-      assets: 'build',
-      precompress: false,
-      strict: true
-    }),
-    // This is the magic SvelteKit setting that replaces the Vite plugin:
-    output: {
-      bundleStrategy: 'inline'
-    },
-    paths: {
-      base: process.argv.includes('dev') ? '' : process.env.BASE_PATH
-    }
+	preprocess: vitePreprocess(),
+	kit: {
+		adapter: adapter({
+			// Fallback enables SPA mode
+			fallback: 'index.html',
+			pages: 'build',
+			assets: 'build',
+			precompress: false,
+			strict: true
+		}),
+		// This is the magic SvelteKit setting that replaces the Vite plugin:
+		output: {
+			bundleStrategy: 'inline'
+		},
+		paths: {
+			base: process.argv.includes('dev') ? '' : process.env.BASE_PATH
+		}
 
-	  //router: {
+		//router: {
 		//  type: 'hash'
-	  //}
-  }
+		//}
+	}
 };
 
 export default config;

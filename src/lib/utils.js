@@ -4,30 +4,30 @@ const standardFormatter = new Intl.NumberFormat('en-US');
 // Scientific formatter (e.g., 1.5E9)
 // maximumFractionDigits ensures it doesn't show "1.50000E9"
 const scientificFormatter = new Intl.NumberFormat('en-US', {
-  notation: 'scientific',
-  maximumFractionDigits: 5 
+	notation: 'scientific',
+	maximumFractionDigits: 5
 });
 
 export function formatLargeNumber(value) {
-  let bigValue;
+	let bigValue;
 
-  try {
-    bigValue = BigInt(value || 0);
-  } catch (error) {
-    bigValue = 0n; // That moonstone bug...
-  }
+	try {
+		bigValue = BigInt(value || 0);
+	} catch (error) {
+		bigValue = 0n; // That moonstone bug...
+	}
 
-  if (bigValue >= 10000000000n) {
-    return scientificFormatter.format(bigValue).toLowerCase().replace('e', 'e+');
-  }
+	if (bigValue >= 10000000000n) {
+		return scientificFormatter.format(bigValue).toLowerCase().replace('e', 'e+');
+	}
 
-  return standardFormatter.format(bigValue);
+	return standardFormatter.format(bigValue);
 }
 
 const decimalFormatter = new Intl.NumberFormat('en-US', {
-  maximumFractionDigits: 2
+	maximumFractionDigits: 2
 });
 
 export function formatDecimal(value) {
-  return decimalFormatter.format(value);
+	return decimalFormatter.format(value);
 }

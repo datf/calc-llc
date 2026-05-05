@@ -1,12 +1,12 @@
 import { sveltekit } from '@sveltejs/kit/vite';
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 import tailwindcss from '@tailwindcss/vite'; // 1. Import the Tailwind Vite plugin
 
 export default defineConfig({
-	plugins: [
-		sveltekit(),
-		tailwindcss()
-	],
+	plugins: [sveltekit(), tailwindcss()],
+	test: {
+		include: ['src/**/*.{test,spec}.{js,ts}']
+	},
 	server: {
 		host: '0.0.0.0', // Listen on all network interfaces
 		port: 5173,

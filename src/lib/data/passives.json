@@ -1,131 +1,65 @@
 {
-    "all_passives": {
-        "player_pickaxe_mining_speed": 0.05,
-        "player_pickaxe_mining_damage": 0.05,
-        "bullet_damage": 0.05,
-        "magic_regen": 0.05,
-        "magic_missiles_damage": 0.05,
-        "axe_damage": 0.05,
-        "mortar_gun_damage": 0.05,
-        "mortar_gun_rate": 0.05,
-        "bomb_damage": 0.05,
-        "drill_damage": 0.05,
-        "employee_miner_damage": 0.02,
-        "employee_miner_speed": 0.05,
-        "employee_collector_speed": 0.02,
-        "employee_collector_capacity": 0.02,
-        "poison_damage": 0.05,
-        "wet_damage": 0.01,
-        "fire_damage": 0.05,
-        "gun_recoil": 0.1,
-        "player_sprint_speed": 0.05,
-        "player_climb_speed": 0.15,
-        "player_jump_velocity": 0.1,
-        "orb_radius": 0.01,
-        "orb_damage": 0.05,
-        "tank_damage": 0.05,
-        "tank_firing_rate": 0.05,
-        "airstrike_rate": 0.05,
-        "airstrike_damage": 0.05,
-        "punch_damage": 0.05,
-        "punch_speed": 0.05,
-        "kick_damage": 0.05,
-        "kick_speed": 0.05
-    },
-    "passive_map": {
-        "bomb": [
-            "bomb_damage"
-        ],
-        "mortar_gun": [
-            "mortar_gun_damage",
-            "mortar_gun_rate"
-        ],
-        "drill": [
-            "drill_damage"
-        ],
-        "nuke": [
-            "bomb_damage"
-        ],
-        "flamethrower": [
-            "fire_damage"
-        ],
-        "water_staff": [
-            "wet_damage",
-            "magic_regen"
-        ],
-        "water_gun": [
-            "wet_damage"
-        ],
-        "poison_staff": [
-            "magic_regen",
-            "poison_damage"
-        ],
-        "poison_gun": [
-            "poison_damage"
-        ],
-        "earthquake": [],
-        "staff": [
-            "magic_regen",
-            "magic_missiles_damage"
-        ],
-        "electric_pickaxe": [
-            "player_pickaxe_mining_speed",
-            "player_pickaxe_mining_damage"
-        ],
-        "axe": [
-            "axe_damage"
-        ],
-        "battleaxe": [
-            "axe_damage"
-        ],
-        "pickaxe": [
-            "player_pickaxe_mining_speed",
-            "player_pickaxe_mining_damage"
-        ],
-        "pistol": [
-            "bullet_damage"
-        ],
-        "shotgun": [
-            "bullet_damage",
-            "gun_recoil"
-        ],
-        "rifle": [
-            "bullet_damage"
-        ],
-        "minigun": [
-            "bullet_damage"
-        ],
-        "collector_whistle": [
-            "employee_collector_speed",
-            "employee_collector_capacity"
-        ],
-        "mining_whistle": [
-            "employee_miner_damage",
-            "employee_miner_speed"
-        ],
-        "item_filter": [],
-        "orb": [
-            "orb_radius",
-            "orb_damage"
-        ],
-        "tank": [
-            "tank_damage",
-            "tank_firing_rate"
-        ],
-        "jet": [
-            "airstrike_damage",
-            "airstrike_rate"
-        ],
-        "boxing_glove": [
-            "punch_damage",
-            "punch_speed"
-        ],
-        "roundhouse_kick": [
-            "kick_damage",
-            "kick_speed"
-        ],
-        "ladder": [
-            "player_climb_speed"
-        ]
-    }
+	"all_passives": {
+		"player_pickaxe_mining_speed": 0.05,
+		"player_pickaxe_mining_damage": 0.05,
+		"bullet_damage": 0.05,
+		"magic_regen": 0.05,
+		"magic_missiles_damage": 0.05,
+		"axe_damage": 0.05,
+		"mortar_gun_damage": 0.05,
+		"mortar_gun_rate": 0.05,
+		"bomb_damage": 0.05,
+		"drill_damage": 0.05,
+		"employee_miner_damage": 0.02,
+		"employee_miner_speed": 0.05,
+		"employee_collector_speed": 0.02,
+		"employee_collector_capacity": 0.02,
+		"poison_damage": 0.05,
+		"wet_damage": 0.01,
+		"fire_damage": 0.05,
+		"gun_recoil": 0.1,
+		"player_sprint_speed": 0.05,
+		"player_climb_speed": 0.15,
+		"player_jump_velocity": 0.1,
+		"orb_radius": 0.01,
+		"orb_damage": 0.05,
+		"tank_damage": 0.05,
+		"tank_firing_rate": 0.05,
+		"airstrike_rate": 0.05,
+		"airstrike_damage": 0.05,
+		"punch_damage": 0.05,
+		"punch_speed": 0.05,
+		"kick_damage": 0.05,
+		"kick_speed": 0.05
+	},
+	"passive_map": {
+		"bomb": ["bomb_damage"],
+		"mortar_gun": ["mortar_gun_damage", "mortar_gun_rate"],
+		"drill": ["drill_damage"],
+		"nuke": ["bomb_damage"],
+		"flamethrower": ["fire_damage"],
+		"water_staff": ["wet_damage", "magic_regen"],
+		"water_gun": ["wet_damage"],
+		"poison_staff": ["magic_regen", "poison_damage"],
+		"poison_gun": ["poison_damage"],
+		"earthquake": [],
+		"staff": ["magic_regen", "magic_missiles_damage"],
+		"electric_pickaxe": ["player_pickaxe_mining_speed", "player_pickaxe_mining_damage"],
+		"axe": ["axe_damage"],
+		"battleaxe": ["axe_damage"],
+		"pickaxe": ["player_pickaxe_mining_speed", "player_pickaxe_mining_damage"],
+		"pistol": ["bullet_damage"],
+		"shotgun": ["bullet_damage", "gun_recoil"],
+		"rifle": ["bullet_damage"],
+		"minigun": ["bullet_damage"],
+		"collector_whistle": ["employee_collector_speed", "employee_collector_capacity"],
+		"mining_whistle": ["employee_miner_damage", "employee_miner_speed"],
+		"item_filter": [],
+		"orb": ["orb_radius", "orb_damage"],
+		"tank": ["tank_damage", "tank_firing_rate"],
+		"jet": ["airstrike_damage", "airstrike_rate"],
+		"boxing_glove": ["punch_damage", "punch_speed"],
+		"roundhouse_kick": ["kick_damage", "kick_speed"],
+		"ladder": ["player_climb_speed"]
+	}
 }

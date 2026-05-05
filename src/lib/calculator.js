@@ -1,53 +1,55 @@
 // $lib/calculator.js
 import { PASSIVE_KEYS } from './database.js';
 import { DPS_FORMULAS, STATUS_APPLIERS } from './formulas.js';
-import * as math from 'mathjs'; 
+import * as math from 'mathjs';
 
 export function calculateLoadoutDPS(loadout, gameState) {
-  let totalDPS = 0;
+	let totalDPS = 0;
 
-  const { independents = [], modifiers = [], heldWeapon = null } = loadout || {};
-  const activeSources = [...independents, ...modifiers];
-  
-  if (heldWeapon) activeSources.push(heldWeapon);
+	const { independents = [], modifiers = [], heldWeapon = null } = loadout || {};
+	const activeSources = [...independents, ...modifiers];
 
-  if (activeSources.length === 0) return 0;
+	if (heldWeapon) activeSources.push(heldWeapon);
 
-  const globalScope = Object.fromEntries(
-    PASSIVE_KEYS.map(key => [`p_${key}`, gameState.passives[key] || 0])
-  );
+	if (activeSources.length === 0) return 0;
 
-  let isWet = false;
+	const globalScope = Object.fromEntries(
+		PASSIVE_KEYS.map((key) => [`p_${key}`, gameState.passives[key] || 0])
+	);
 
-  for (const source of activeSources) {
-    const type = source.data?.itemType || source.data?.type;
-    if (!isWet && STATUS_APPLIERS.wet.includes(type)) {
-      isWet = true;
-    }
+	let isWet = false;
 
-    let archetype = 'default';
-    if (source.type === 'equipment') {
-      archetype = type;
-    } else if (source.type === 'employee') {
-      archetype = Number(source.data.aoe_damage) > 0 ? 'employee_miner_aoe' : 'employee_miner';
-    }
+	for (const source of activeSources) {
+		const type = source.data?.itemType || source.data?.type;
+		if (!isWet && STATUS_APPLIERS.wet.includes(type)) {
+			isWet = true;
+		}
 
-    const formulaString = DPS_FORMULAS[archetype] || DPS_FORMULAS['default'];
-    const localScope = { ...globalScope, ...source.data };
+		let archetype = 'default';
+		if (source.type === 'equipment') {
+			archetype = type;
+		} else if (source.type === 'employee') {
+			archetype = Number(source.data.aoe_damage) > 0 ? 'employee_miner_aoe' : 'employee_miner';
+		}
 
-    try {
-      let sourceDPS = math.evaluate(formulaString, localScope);
-      const count = source.activeCount || 1;
-      totalDPS += (sourceDPS * count);
-    } catch (err) {
-      console.error(`[Calculator Engine] Failed to evaluate ${source.name || archetype} using formula: ${formulaString}`, err);
-    }
-  }
+		const formulaString = DPS_FORMULAS[archetype] || DPS_FORMULAS['default'];
+		const localScope = { ...globalScope, ...source.data };
 
-  if (isWet) {
-    totalDPS = totalDPS * (2 * (1 + globalScope.p_wet_damage));
-  }
+		try {
+			let sourceDPS = math.evaluate(formulaString, localScope);
+			const count = source.activeCount || 1;
+			totalDPS += sourceDPS * count;
+		} catch (err) {
+			console.error(
+				`[Calculator Engine] Failed to evaluate ${source.name || archetype} using formula: ${formulaString}`,
+				err
+			);
+		}
+	}
 
-  return totalDPS;
+	if (isWet) {
+		totalDPS = totalDPS * (2 * (1 + globalScope.p_wet_damage));
+	}
+
+	return totalDPS;
 }
-
