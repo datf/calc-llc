@@ -77,131 +77,148 @@ export function getMemoizedItemDPS(id, isEmployee, items, employees, gameState) 
 }
 
 export function calculateBestUpgrades(gameState, items, employees, upgradeStrategy) {
-  const inventoryItems = [];
-  const shopItems = [];
-  let totalSellValue = 0n; // Use BigInt explicitly
+	const inventoryItems = [];
+	const shopItems = [];
+	let totalSellValue = 0n; // Use BigInt explicitly
 
-  // 1. Calculate Sellable Inventory
-  for (const [id, count] of Object.entries(gameState.inventory)) {
-    if (count > 0) {
-      const item = items.get(id);
-      if (item && item.itemSellPrice) {
-        const sellPrice = BigInt(item.itemSellPrice);
-        totalSellValue += (sellPrice * BigInt(count));
-        for (let i = 0; i < count; i++) {
-          inventoryItems.push({ ...item, refId: id, price: sellPrice, isOwned: true, isEmployee: false });
-        }
-      }
-    }
-  }
+	// 1. Calculate Sellable Inventory
+	for (const [id, count] of Object.entries(gameState.inventory)) {
+		if (count > 0) {
+			const item = items.get(id);
+			if (item && item.itemSellPrice) {
+				const sellPrice = BigInt(item.itemSellPrice);
+				totalSellValue += sellPrice * BigInt(count);
+				for (let i = 0; i < count; i++) {
+					inventoryItems.push({
+						...item,
+						refId: id,
+						price: sellPrice,
+						isOwned: true,
+						isEmployee: false
+					});
+				}
+			}
+		}
+	}
 
-  // Active employees -> inventory representation
-  for (const [id, count] of Object.entries(gameState.hiredEmployees)) {
-    if (count > 0n || count > 0) { 
-      const emp = employees.get(id);
-      if (emp && emp.price) { 
-        // Example logic: sell price is half of buy price
-        const sellValue = BigInt(emp.price) / 2n; 
-        totalSellValue += (sellValue * BigInt(count));
-        for(let i = 0; i < Number(count); i++) {
-          inventoryItems.push({ ...emp, name: formatEmployeeName(emp.employee_id), refId: id, price: sellValue, isOwned: true, isEmployee: true });
-        }
-      }
-    }
-  }
+	// Active employees -> inventory representation
+	for (const [id, count] of Object.entries(gameState.hiredEmployees)) {
+		if (count > 0n || count > 0) {
+			const emp = employees.get(id);
+			if (emp && emp.price) {
+				// Example logic: sell price is half of buy price
+				const sellValue = BigInt(emp.price) / 2n;
+				totalSellValue += sellValue * BigInt(count);
+				for (let i = 0; i < Number(count); i++) {
+					inventoryItems.push({
+						...emp,
+						name: formatEmployeeName(emp.employee_id),
+						refId: id,
+						price: sellValue,
+						isOwned: true,
+						isEmployee: true
+					});
+				}
+			}
+		}
+	}
 
-  const maxCapacity = BigInt(gameState.cash || 0) + totalSellValue;
+	const maxCapacity = BigInt(gameState.cash || 0) + totalSellValue;
 
-  // 2. Filter unaffordable shop items
-  for (const [id, item] of items.entries()) {
-    if (item.itemBuyPrice) {
-      const buyPrice = BigInt(item.itemBuyPrice);
-      if (buyPrice <= maxCapacity && !IGNORED_TYPES.includes(item.itemType)) {
-        shopItems.push({ ...item, refId: id, price: buyPrice, isOwned: false, isEmployee: false });
-      }
-    }
-  }
+	// 2. Filter unaffordable shop items
+	for (const [id, item] of items.entries()) {
+		if (item.itemBuyPrice) {
+			const buyPrice = BigInt(item.itemBuyPrice);
+			if (buyPrice <= maxCapacity && !IGNORED_TYPES.includes(item.itemType)) {
+				shopItems.push({ ...item, refId: id, price: buyPrice, isOwned: false, isEmployee: false });
+			}
+		}
+	}
 
-  // 3. Calculate Values and Densities
-  const candidates = [...shopItems, ...inventoryItems].map(c => {
-    let value = 0;
-    if (upgradeStrategy === 'MAX_DPS') {
-      value = getMemoizedItemDPS(c.refId, c.isEmployee, items, employees, gameState);
-    } else if (upgradeStrategy === 'COLLECTION') {
-      value = c.isOwned ? 1 : 100;
-    } else {
-      value = Math.random() * 10; 
-    }
+	// 3. Calculate Values and Densities
+	const candidates = [...shopItems, ...inventoryItems]
+		.map((c) => {
+			let value = 0;
+			if (upgradeStrategy === 'MAX_DPS') {
+				value = getMemoizedItemDPS(c.refId, c.isEmployee, items, employees, gameState);
+			} else if (upgradeStrategy === 'COLLECTION') {
+				value = c.isOwned ? 1 : 100;
+			} else {
+				value = Math.random() * 10;
+			}
 
-    // Value Density = DPS / Price. 
-    // We convert the BigInt price to Number temporarily JUST for the ratio.
-    // Even if price is 1e60, the ratio will just be a very small float, which is fine for sorting.
-    const priceAsNumber = Number(c.price); 
-    const density = priceAsNumber > 0 ? (value / priceAsNumber) : value;
+			// Value Density = DPS / Price.
+			// We convert the BigInt price to Number temporarily JUST for the ratio.
+			// Even if price is 1e60, the ratio will just be a very small float, which is fine for sorting.
+			const priceAsNumber = Number(c.price);
+			const density = priceAsNumber > 0 ? value / priceAsNumber : value;
 
-    return { ...c, value, density };
-  }).filter(c => c.value > 0);
+			return { ...c, value, density };
+		})
+		.filter((c) => c.value > 0);
 
-  // Sort by density (highest DPS per gold first)
-  candidates.sort((a, b) => b.density - a.density);
+	// Sort by density (highest DPS per gold first)
+	candidates.sort((a, b) => b.density - a.density);
 
-  // 4. Greedy Selection (Buy top items until out of money)
-  let remainingBudget = maxCapacity;
-  const optimalSelection = [];
-  let totalDPS = 0;
+	// 4. Greedy Selection (Buy top items until out of money)
+	let remainingBudget = maxCapacity;
+	const optimalSelection = [];
+	let totalDPS = 0;
 
-  for (const item of candidates) {
-    if (item.price <= remainingBudget) {
-      optimalSelection.push(item);
-      remainingBudget -= item.price;
-      totalDPS += item.value;
-    }
-  }
+	for (const item of candidates) {
+		if (item.price <= remainingBudget) {
+			optimalSelection.push(item);
+			remainingBudget -= item.price;
+			totalDPS += item.value;
+		}
+	}
 
-  // 5. Structure the Actions (Buy / Sell / Keep)
-  const toBuy = optimalSelection.filter(i => !i.isOwned);
-  const keptIds = [];
-  optimalSelection.filter(i => i.isOwned).forEach(i => keptIds.push(i.refId));
-  
-  let tempInv = [...inventoryItems];
-  keptIds.forEach(kId => {
-      const idx = tempInv.findIndex(t => t.refId === kId);
-      if(idx !== -1) tempInv.splice(idx, 1);
-  });
-  const toSell = tempInv; // What wasn't kept is sold
+	// 5. Structure the Actions (Buy / Sell / Keep)
+	const toBuy = optimalSelection.filter((i) => !i.isOwned);
+	const keptIds = [];
+	optimalSelection.filter((i) => i.isOwned).forEach((i) => keptIds.push(i.refId));
 
-  const groupItems = (arr) => {
-      const map = new Map();
-      arr.forEach(i => {
-          if (map.has(i.refId)) {
-              const entry = map.get(i.refId);
-              entry.qty++;
-              entry.total += i.price;
-          } else {
-              map.set(i.refId, { 
-                name: i.itemName || i.name, 
-                qty: 1, 
-                total: i.price, 
-                pics: [i.picB64 || i.head_texture_base64] 
-              });
-          }
-      });
-      return Array.from(map.values());
-  };
+	let tempInv = [...inventoryItems];
+	keptIds.forEach((kId) => {
+		const idx = tempInv.findIndex((t) => t.refId === kId);
+		if (idx !== -1) tempInv.splice(idx, 1);
+	});
+	const toSell = tempInv; // What wasn't kept is sold
 
-  const topResults = [{
-      id: 1,
-      projectedValue: totalDPS,
-      buy: { 
-        items: groupItems(toBuy), 
-        totalSpent: toBuy.reduce((sum, i) => sum + i.price, 0n) 
-      },
-      sell: { 
-        items: groupItems(toSell), 
-        totalEarned: toSell.reduce((sum, i) => sum + i.price, 0n) 
-      },
-      quests: []
-  }];
+	const groupItems = (arr) => {
+		const map = new Map();
+		arr.forEach((i) => {
+			if (map.has(i.refId)) {
+				const entry = map.get(i.refId);
+				entry.qty++;
+				entry.total += i.price;
+			} else {
+				map.set(i.refId, {
+					name: i.itemName || i.name,
+					qty: 1,
+					total: i.price,
+					pics: [i.picB64 || i.head_texture_base64]
+				});
+			}
+		});
+		return Array.from(map.values());
+	};
 
-  return topResults;
+	const topResults = [
+		{
+			id: 1,
+			projectedValue: totalDPS,
+			buy: {
+				items: groupItems(toBuy),
+				totalSpent: toBuy.reduce((sum, i) => sum + i.price, 0n)
+			},
+			sell: {
+				items: groupItems(toSell),
+				totalEarned: toSell.reduce((sum, i) => sum + i.price, 0n)
+			},
+			quests: []
+		}
+	];
+
+	return topResults;
 }
