@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { calculateBestUpgrades } from './optimizer.js';
 
-describe('Optimizer Knapsack Algorithm', () => {
+describe('Optimizer Knapsack Greedy Algorithm', () => {
 	it('should correctly suggest selling unused inventory for a DPS upgrade', () => {
 		const mockGameState = {
 			cash: 10n,
@@ -17,16 +17,16 @@ describe('Optimizer Knapsack Algorithm', () => {
 					itemName: 'Old Pickaxe',
 					itemType: 'pickaxe',
 					itemSellPrice: 5n,
-					Strength: 10 // Used by PICKAXE_DPS formula
+					Strength: 10n
 				}
 			],
 			[
 				'new_bomb',
 				{
 					itemName: 'New Bomb',
-					itemType: 'bomb', // bomb has a valid formula in formulas.js!
+					itemType: 'bomb',
 					itemBuyPrice: 15n,
-					damage: 100 // Used by BOMB_DPS formula
+					damage: 100n
 				}
 			]
 		]);
@@ -39,13 +39,11 @@ describe('Optimizer Knapsack Algorithm', () => {
 
 		expect(option1).toBeDefined();
 
-		// Now it should realize Bomb (100 DPS) > Pickaxe (10 DPS)
-		// and successfully suggest the swap!
-		expect(option1.sell.totalEarned).toBe(5);
+		expect(option1.sell.totalEarned).toBe(5n);
 		expect(option1.sell.items.length).toBe(1);
 		expect(option1.sell.items[0].name).toBe('Old Pickaxe');
 
-		expect(option1.buy.totalSpent).toBe(15);
+		expect(option1.buy.totalSpent).toBe(15n);
 		expect(option1.buy.items.length).toBe(1);
 		expect(option1.buy.items[0].name).toBe('New Bomb');
 	});

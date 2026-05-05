@@ -76,179 +76,132 @@ export function getMemoizedItemDPS(id, isEmployee, items, employees, gameState) 
 	return dps;
 }
 
-/**
- * Core 0/1 Knapsack Algorithm. Computes the optimal items to buy/sell based on a strategy.
- * This is a pure function making it highly testable.
- */
 export function calculateBestUpgrades(gameState, items, employees, upgradeStrategy) {
-	let totalSellValue = 0;
-	const inventoryItems = [];
-	const shopItems = [];
+  const inventoryItems = [];
+  const shopItems = [];
+  let totalSellValue = 0n; // Use BigInt explicitly
 
-	// 1. Calculate max capacity based on cash + sellable inventory
-	for (const [id, count] of Object.entries(gameState.inventory)) {
-		if (count > 0) {
-			const item = items.get(id);
-			if (item && item.itemSellPrice) {
-				const sellPriceNum = Number(item.itemSellPrice);
-				totalSellValue += sellPriceNum * Number(count);
-				for (let i = 0; i < count; i++) {
-					inventoryItems.push({
-						...item,
-						refId: id,
-						weight: sellPriceNum,
-						isOwned: true,
-						isEmployee: false
-					});
-				}
-			}
-		}
-	}
+  // 1. Calculate Sellable Inventory
+  for (const [id, count] of Object.entries(gameState.inventory)) {
+    if (count > 0) {
+      const item = items.get(id);
+      if (item && item.itemSellPrice) {
+        const sellPrice = BigInt(item.itemSellPrice);
+        totalSellValue += (sellPrice * BigInt(count));
+        for (let i = 0; i < count; i++) {
+          inventoryItems.push({ ...item, refId: id, price: sellPrice, isOwned: true, isEmployee: false });
+        }
+      }
+    }
+  }
 
-	// Active employees -> inventory representation
-	for (const [id, count] of Object.entries(gameState.hiredEmployees)) {
-		if (count > 0n || count > 0) {
-			const emp = employees.get(id);
-			if (emp && emp.price) {
-				const sellValue = Math.floor(Number(emp.price) * 0.5);
-				totalSellValue += sellValue * Number(count);
-				for (let i = 0; i < Number(count); i++) {
-					inventoryItems.push({
-						...emp,
-						name: formatEmployeeName(emp.employee_id),
-						refId: id,
-						weight: sellValue,
-						isOwned: true,
-						isEmployee: true
-					});
-				}
-			}
-		}
-	}
+  // Active employees -> inventory representation
+  for (const [id, count] of Object.entries(gameState.hiredEmployees)) {
+    if (count > 0n || count > 0) { 
+      const emp = employees.get(id);
+      if (emp && emp.price) { 
+        // Example logic: sell price is half of buy price
+        const sellValue = BigInt(emp.price) / 2n; 
+        totalSellValue += (sellValue * BigInt(count));
+        for(let i = 0; i < Number(count); i++) {
+          inventoryItems.push({ ...emp, name: formatEmployeeName(emp.employee_id), refId: id, price: sellValue, isOwned: true, isEmployee: true });
+        }
+      }
+    }
+  }
 
-	const maxCapacity = Math.floor(Number(gameState.cash || 0) + totalSellValue);
+  const maxCapacity = BigInt(gameState.cash || 0) + totalSellValue;
 
-	// 2. Filter unaffordable shop items
-	for (const [id, item] of items.entries()) {
-		const buyPriceNum = Number(item.itemBuyPrice || Infinity);
-		if (buyPriceNum <= maxCapacity && !IGNORED_TYPES.includes(item.itemType)) {
-			shopItems.push({
-				...item,
-				refId: id,
-				weight: buyPriceNum,
-				isOwned: false,
-				isEmployee: false
-			});
-		}
-	}
+  // 2. Filter unaffordable shop items
+  for (const [id, item] of items.entries()) {
+    if (item.itemBuyPrice) {
+      const buyPrice = BigInt(item.itemBuyPrice);
+      if (buyPrice <= maxCapacity && !IGNORED_TYPES.includes(item.itemType)) {
+        shopItems.push({ ...item, refId: id, price: buyPrice, isOwned: false, isEmployee: false });
+      }
+    }
+  }
 
-	// Assign knapsack values based on the chosen strategy
-	const candidates = [...shopItems, ...inventoryItems]
-		.map((c) => {
-			let value = 0;
-			if (upgradeStrategy === 'MAX_DPS') {
-				value = getMemoizedItemDPS(c.refId, c.isEmployee, items, employees, gameState);
-			} else if (upgradeStrategy === 'COLLECTION') {
-				value = c.isOwned ? 1 : 100;
-			} else {
-				value = Math.random() * 10; // Placeholder for Quests weighting
-			}
-			return { ...c, value };
-		})
-		.filter((c) => c.value > 0);
+  // 3. Calculate Values and Densities
+  const candidates = [...shopItems, ...inventoryItems].map(c => {
+    let value = 0;
+    if (upgradeStrategy === 'MAX_DPS') {
+      value = getMemoizedItemDPS(c.refId, c.isEmployee, items, employees, gameState);
+    } else if (upgradeStrategy === 'COLLECTION') {
+      value = c.isOwned ? 1 : 100;
+    } else {
+      value = Math.random() * 10; 
+    }
 
-	// 3. 0/1 Knapsack Execution
-	const scaleFactor = Math.max(1, Math.floor(maxCapacity / 50000));
-	const W = Math.floor(maxCapacity / scaleFactor);
+    // Value Density = DPS / Price. 
+    // We convert the BigInt price to Number temporarily JUST for the ratio.
+    // Even if price is 1e60, the ratio will just be a very small float, which is fine for sorting.
+    const priceAsNumber = Number(c.price); 
+    const density = priceAsNumber > 0 ? (value / priceAsNumber) : value;
 
-	const dp = new Float32Array(W + 1);
-	const keep = Array.from({ length: candidates.length }, () => new Uint8Array(W + 1));
+    return { ...c, value, density };
+  }).filter(c => c.value > 0);
 
-	for (let i = 0; i < candidates.length; i++) {
-		const wt = Math.ceil(candidates[i].weight / scaleFactor);
-		const val = candidates[i].value;
-		if (wt <= 0) continue;
+  // Sort by density (highest DPS per gold first)
+  candidates.sort((a, b) => b.density - a.density);
 
-		for (let w = W; w >= wt; w--) {
-			if (dp[w - wt] + val > dp[w]) {
-				dp[w] = dp[w - wt] + val;
-				keep[i][w] = 1;
-			}
-		}
-	}
+  // 4. Greedy Selection (Buy top items until out of money)
+  let remainingBudget = maxCapacity;
+  const optimalSelection = [];
+  let totalDPS = 0;
 
-	// 4. Backtrack Optimal Path
-	let remainingW = W;
-	const optimalSelection = [];
-	for (let i = candidates.length - 1; i >= 0; i--) {
-		if (keep[i] && keep[i][remainingW] === 1) {
-			optimalSelection.push(candidates[i]);
-			remainingW -= Math.ceil(candidates[i].weight / scaleFactor);
-		}
-	}
+  for (const item of candidates) {
+    if (item.price <= remainingBudget) {
+      optimalSelection.push(item);
+      remainingBudget -= item.price;
+      totalDPS += item.value;
+    }
+  }
 
-	// 5. Structure the Actions (Buy / Sell / Keep)
-	const toBuy = optimalSelection.filter((i) => !i.isOwned);
-	const keptIds = [];
-	optimalSelection.filter((i) => i.isOwned).forEach((i) => keptIds.push(i.refId));
+  // 5. Structure the Actions (Buy / Sell / Keep)
+  const toBuy = optimalSelection.filter(i => !i.isOwned);
+  const keptIds = [];
+  optimalSelection.filter(i => i.isOwned).forEach(i => keptIds.push(i.refId));
+  
+  let tempInv = [...inventoryItems];
+  keptIds.forEach(kId => {
+      const idx = tempInv.findIndex(t => t.refId === kId);
+      if(idx !== -1) tempInv.splice(idx, 1);
+  });
+  const toSell = tempInv; // What wasn't kept is sold
 
-	let tempInv = [...inventoryItems];
-	keptIds.forEach((kId) => {
-		const idx = tempInv.findIndex((t) => t.refId === kId);
-		if (idx !== -1) tempInv.splice(idx, 1);
-	});
-	const toSell = tempInv;
+  const groupItems = (arr) => {
+      const map = new Map();
+      arr.forEach(i => {
+          if (map.has(i.refId)) {
+              const entry = map.get(i.refId);
+              entry.qty++;
+              entry.total += i.price;
+          } else {
+              map.set(i.refId, { 
+                name: i.itemName || i.name, 
+                qty: 1, 
+                total: i.price, 
+                pics: [i.picB64 || i.head_texture_base64] 
+              });
+          }
+      });
+      return Array.from(map.values());
+  };
 
-	const groupItems = (arr, isBuy) => {
-		const map = new Map();
-		arr.forEach((i) => {
-			const key = i.refId;
-			const price = isBuy ? Number(i.itemBuyPrice || 0) : i.weight;
-			if (map.has(key)) {
-				const entry = map.get(key);
-				entry.qty++;
-				entry.total += price;
-			} else {
-				map.set(key, {
-					name: i.itemName || i.name,
-					qty: 1,
-					total: price,
-					pics: [i.picB64 || i.head_texture_base64]
-				});
-			}
-		});
-		return Array.from(map.values());
-	};
+  const topResults = [{
+      id: 1,
+      projectedValue: totalDPS,
+      buy: { 
+        items: groupItems(toBuy), 
+        totalSpent: toBuy.reduce((sum, i) => sum + i.price, 0n) 
+      },
+      sell: { 
+        items: groupItems(toSell), 
+        totalEarned: toSell.reduce((sum, i) => sum + i.price, 0n) 
+      },
+      quests: []
+  }];
 
-	const topResults = [
-		{
-			id: 1,
-			projectedValue: dp[W],
-			buy: {
-				items: groupItems(toBuy, true),
-				totalSpent: toBuy.reduce((sum, i) => sum + Number(i.itemBuyPrice || 0), 0)
-			},
-			sell: {
-				items: groupItems(toSell, false),
-				totalEarned: toSell.reduce((sum, i) => sum + i.weight, 0)
-			},
-			quests: upgradeStrategy === 'QUESTS' ? ["Complete 'The Deep Dig' for +500g"] : []
-		}
-	];
-
-	// Mock options 2 and 3
-	topResults.push({
-		...topResults[0],
-		id: 2,
-		projectedValue: dp[W] * 0.9,
-		buy: { items: [], totalSpent: 0 }
-	});
-	topResults.push({
-		...topResults[0],
-		id: 3,
-		projectedValue: dp[W] * 0.75,
-		sell: { items: [], totalEarned: 0 }
-	});
-
-	return topResults;
+  return topResults;
 }
