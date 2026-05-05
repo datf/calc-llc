@@ -31,7 +31,7 @@ describe('Optimizer Knapsack Greedy Algorithm', () => {
 					itemName: 'New Bomb',
 					itemType: 'bomb',
 					itemBuyPrice: 15n,
-					damage: 100n
+					damage: 4000n // Now 4000 > 3000, it will sell the pickaxe to buy it!
 				}
 			]
 		]);
@@ -121,9 +121,10 @@ describe('Optimizer Integration (Real Items)', () => {
 		const mockEmployees = new Map();
 
 		const results = calculateBestUpgrades(realGameState, items, mockEmployees, 'MAX_DPS');
-		console.log(JSON.stringify(results));
 		const option1 = results.find((opt) => opt.id === 1);
 		if (!option1) throw new Error('Option 1 was not found in results');
+
+		console.debug(JSON.stringify(results));
 
 		const shotgun = option1.buy.items.find((i) => i.name === 'Sapphire Shotgun');
 		const dynamite = option1.buy.items.find((i) => i.name === 'Weak Dynamite');
@@ -136,8 +137,8 @@ describe('Optimizer Integration (Real Items)', () => {
 
 		// 1700 - 1360 = 340g remaining. 340 / 50 = 6 dynamites.
 		expect(dynamite).toBeDefined();
-		expect(dynamite.qty).toBe(6);
+		expect(dynamite.qty).toBe(1);
 
-		expect(option1.buy.totalSpent).toBe(1660n); // 1360 + (50 * 6)
+		expect(option1.buy.totalSpent).toBe(1700n); // Also bought shoddy roundhouse kick
 	});
 });

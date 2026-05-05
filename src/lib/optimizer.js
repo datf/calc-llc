@@ -170,38 +170,53 @@ export function calculateBestUpgrades(gameState, items, employees, upgradeStrate
 			// Density uses the temporal sortingWeight instead of raw value
 			const density = priceAsNumber > 0 ? sortingWeight / priceAsNumber : sortingWeight;
 
-			return { ...c, value, density };
+			return { ...c, value, density, sortingWeight };
 		})
-		.filter((c) => c.value > 0);
+		.filter((c) => c.value > 0)
+		.sort((a, b) => b.sortingWeight - a.sortingWeight || b.density - a.density);
 
 	// 4. Greedy Selection (Buy top items until out of money)
 	let remainingBudget = maxCapacity;
 	const optimalSelection = [];
 	let totalDPS = 0;
 
+	let hasHeldWeapon = false; // <-- 1. Add weapon slot tracker
+
 	for (const item of candidates) {
 		if (item.price > remainingBudget) continue;
+
+		// 2. Determine if this item is a main held weapon
+		const itemTypeStr = item.itemType || '';
+		const isHeldWeapon =
+			!item.isEmployee &&
+			!INDEPENDENT_TYPES.includes(itemTypeStr) &&
+			!MODIFIER_TYPES.includes(itemTypeStr) &&
+			!itemTypeStr.includes('water') &&
+			!CONSUMABLE_TYPES.includes(itemTypeStr);
+
+		// 3. If we already bought a weapon, skip any other held weapons!
+		if (isHeldWeapon && hasHeldWeapon) {
+			continue;
+		}
 
 		if (item.isOwned) {
 			optimalSelection.push({ ...item, qty: 1 });
 			remainingBudget -= item.price;
 			totalDPS += item.value;
+			if (isHeldWeapon) hasHeldWeapon = true; // Mark slot as filled
 		} else {
 			// Calculate quantity
-			const isHeldWeapon =
-				!INDEPENDENT_TYPES.includes(item.itemType) && !MODIFIER_TYPES.includes(item.itemType);
-			const isStackable = !NON_STACKABLE_TYPES.includes(item.itemType) && !isHeldWeapon;
+			const isStackable = !NON_STACKABLE_TYPES.includes(itemTypeStr) && !isHeldWeapon;
 
 			const maxAffordable = remainingBudget / item.price;
 			const qtyToBuy = isStackable ? Number(maxAffordable) : 1;
 
 			if (qtyToBuy > 0) {
-				// Push ONCE with the calculated quantity
 				optimalSelection.push({ ...item, qty: qtyToBuy });
-
 				const totalCost = item.price * BigInt(qtyToBuy);
 				remainingBudget -= totalCost;
 				totalDPS += item.value * qtyToBuy;
+				if (isHeldWeapon) hasHeldWeapon = true; // Mark slot as filled
 			}
 		}
 	}
