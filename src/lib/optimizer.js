@@ -207,6 +207,15 @@ export function calculateBestUpgrades(gameState, items, employees, upgradeStrate
 					rawDpsOrDamage = getMemoizedItemDPS(c.refId, c.isEmployee, items, employees, gameState);
 				}
 
+				const SIGNIFICANCE_THRESHOLD = 0.15; // 15%
+
+				const isAutonomous = c.isEmployee;
+
+				if (!isAutonomous) {
+					if (rawDpsOrDamage < highestWeaponDPS * SIGNIFICANCE_THRESHOLD) {
+						rawDpsOrDamage = 0;
+					}
+				}
 				value = rawDpsOrDamage;
 
 				const isConsumable = !c.isEmployee && CONSUMABLE_TYPES.includes(c.itemType);
@@ -220,12 +229,17 @@ export function calculateBestUpgrades(gameState, items, employees, upgradeStrate
 			}
 
 			const priceAsNumber = Number(c.price);
-			// Density uses the temporal sortingWeight instead of raw value
-			const density = priceAsNumber > 0 ? sortingWeight / priceAsNumber : sortingWeight;
+
+			// If we already own the item, don't penalize its density by its sell price.
+			// Give owned items massive density so they aren't downgraded pointlessly
+			// This prevents "downgrading" to a cheaper shop item with identical DPS just for pocket change.
+			const densityPrice = c.isOwned ? 0 : priceAsNumber;
+
+			const density = densityPrice > 0 ? sortingWeight / densityPrice : sortingWeight * 999999999;
 
 			return { ...c, value, density, sortingWeight };
 		})
-		.filter((c) => c.value > 0)
+		.filter((c) => c.value > 0 || c.isOwned)
 		.sort((a, b) => b.sortingWeight - a.sortingWeight || b.density - a.density);
 
 	// 4. Greedy Selection (Buy top items until out of money)
@@ -249,7 +263,8 @@ export function calculateBestUpgrades(gameState, items, employees, upgradeStrate
 			!INDEPENDENT_TYPES.includes(itemTypeStr) &&
 			!MODIFIER_TYPES.includes(itemTypeStr) &&
 			!itemTypeStr.includes('water') &&
-			!CONSUMABLE_TYPES.includes(itemTypeStr);
+			!CONSUMABLE_TYPES.includes(itemTypeStr) &&
+			!IGNORED_TYPES.includes(itemTypeStr);
 
 		// Identify if this item fills an exclusive action/effect slot
 		const isPoison = itemTypeStr.includes('poison');

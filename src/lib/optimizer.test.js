@@ -131,8 +131,8 @@ describe('Optimizer Integration (Real Items)', () => {
 
 		// 1700 - 1360 = 340g remaining. 340 / 50 = 6 dynamites.
 		expect(dynamite).toBeDefined();
-		expect(dynamite.qty).toBe(1);
+		expect(dynamite.qty).toBe(6);
 
-		expect(option1.buy.totalSpent).toBe(1700n); // Also bought shoddy roundhouse kick
+		expect(option1.buy.totalSpent).toBe(1660n);
 	});
 });
