@@ -294,8 +294,10 @@
 		// Slight timeout allows the UI to render the "Calculating..." state
 		setTimeout(() => {
 			const itemsForProfession = getItemsForProfession(gameState.professionId);
+			const itemsMap = new Map(itemsForProfession.map((e) => [e.itemID, e]));
 			const employeesForProfession = getOrgChart(gameState.professionId);
-			upgradeResults = calculateBestUpgrades(gameState, items, employees, upgradeStrategy);
+			const employeeMap = new Map(employeesForProfession.map((e) => [e.employee_id, e]));
+			upgradeResults = calculateBestUpgrades(gameState, itemsMap, employeeMap, upgradeStrategy);
 			isCalculating = false;
 		}, 50);
 	}

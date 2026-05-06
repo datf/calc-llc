@@ -1,4 +1,4 @@
-import { calculateLoadoutDPS } from './calculator.js';
+import { calculateLoadoutDPS, CONSUMABLE_TYPES } from './calculator.js';
 
 // --- CATEGORIZATION CONSTANTS ---
 export const IGNORED_TYPES = [
@@ -28,7 +28,6 @@ export const NON_STACKABLE_TYPES = [
 	'water_gun',
 	'water_staff'
 ];
-export const CONSUMABLE_TYPES = ['bomb', 'nuke', 'earthquake']; // Items that deal burst damage and are consumed
 
 // DPS Memoization Cache
 const dpsCache = new Map();
@@ -93,7 +92,7 @@ export function getMemoizedItemDPS(
 		}
 	}
 
-	const dps = calculateLoadoutDPS(mockLoadout, gameState);
+	const dps = calculateLoadoutDPS(mockLoadout, gameState, true);
 	dpsCache.set(id, dps);
 	return dps;
 }
@@ -293,6 +292,58 @@ export function calculateBestUpgrades(gameState, items, employees, upgradeStrate
 		if (isJet && hasJet) continue;
 		if (isKick && hasKick) continue;
 		if (isWater && hasWater) continue;
+
+		if (isHeldWeapon && !item.isOwned) {
+			const budgetAfterThis = remainingBudget - item.price;
+
+			// Find the strongest modifier we evaluate
+			const topModifier = candidates.find((c) => {
+				const t = c.itemType || '';
+				return (MODIFIER_TYPES.includes(t) || t.includes('water')) && !c.isOwned;
+			});
+
+			// If we haven't bought a modifier yet, and we can't afford it with this weapon
+			if (!hasWater && topModifier && topModifier.price > budgetAfterThis) {
+				let foundBetterCombo = false;
+
+				// Loop through ALL other affordable weapons to see if ANY allow the combo
+				for (const alt of candidates) {
+					const t = alt.itemType || '';
+					const isAltBase =
+						!alt.isEmployee &&
+						!INDEPENDENT_TYPES.includes(t) &&
+						!MODIFIER_TYPES.includes(t) &&
+						!t.includes('water') &&
+						!CONSUMABLE_TYPES.includes(t) &&
+						!IGNORED_TYPES.includes(t);
+
+					if (isAltBase && alt.refId !== item.refId && alt.price <= remainingBudget) {
+						const budgetAfterAlt = remainingBudget - alt.price;
+						if (topModifier.price <= budgetAfterAlt) {
+							// We can afford the combo with this alt weapon! Let's check the DPS.
+							const fullComboDps = getMemoizedItemDPS(
+								topModifier.refId,
+								false,
+								items,
+								employees,
+								gameState,
+								alt.refId
+							);
+							if (fullComboDps > item.value) {
+								foundBetterCombo = true;
+								break; // We found a valid, stronger combo! Stop searching.
+							}
+						}
+					}
+				}
+
+				// If a cheaper weapon + modifier combo yields more DPS, skip this expensive weapon!
+				if (foundBetterCombo) {
+					continue;
+				}
+			}
+		}
+		// ========================================================
 
 		if (item.isOwned) {
 			optimalSelection.push({ ...item, qty: 1 });
