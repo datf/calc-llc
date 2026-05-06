@@ -41,6 +41,15 @@
 		calculateBestUpgrades
 	} from '$lib/optimizer.js';
 
+	const LAYER_PROGRESSION = [
+		'dirt', // Base layer (Index 0)
+		'clay', // Index 1
+		'stone', // Index 2
+		'ice', // Index 3
+		'fire', // Index 4
+		'dark' // Index 5
+	];
+
 	let activeTab = $state('power');
 
 	// --- SOURCE LOGIC ---
@@ -136,7 +145,14 @@
 
 	let layerOptions = $derived.by(() => {
 		const map = new Map();
+		const shiftAmount = Number(gameState.bonus_equipment_manager?.shift_layers_up || 0);
+
 		for (const t of tiles) {
+			const layerIndex = LAYER_PROGRESSION.indexOf(t.layer);
+			if (layerIndex > 0 && layerIndex <= shiftAmount) {
+				continue;
+			}
+
 			if (!map.has(t.layer)) {
 				map.set(t.layer, t.pics_in_rock_base64?.[0]);
 			} else if (t.resource === 'basic') {
