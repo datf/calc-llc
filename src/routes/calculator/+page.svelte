@@ -22,7 +22,14 @@
 	 */
 
 	import { gameState } from '$lib/game.svelte.js';
-	import { tiles, items, employees, passiveMap } from '$lib/database.js';
+	import {
+		tiles,
+		items,
+		employees,
+		passiveMap,
+		getItemsForProfession,
+		getOrgChart
+	} from '$lib/database.js';
 	import { formatLargeNumber } from '$lib/utils.js';
 	import { calculateLoadoutDPS } from '$lib/calculator.js';
 	import {
@@ -286,6 +293,8 @@
 
 		// Slight timeout allows the UI to render the "Calculating..." state
 		setTimeout(() => {
+			const itemsForProfession = getItemsForProfession(gameState.professionId);
+			const employeesForProfession = getOrgChart(gameState.professionId);
 			upgradeResults = calculateBestUpgrades(gameState, items, employees, upgradeStrategy);
 			isCalculating = false;
 		}, 50);

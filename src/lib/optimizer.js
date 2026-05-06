@@ -99,6 +99,7 @@ export function getMemoizedItemDPS(
 }
 
 export function calculateBestUpgrades(gameState, items, employees, upgradeStrategy) {
+	dpsCache.clear();
 	const inventoryItems = [];
 	const shopItems = [];
 	let totalSellValue = 0n; // Use BigInt explicitly
@@ -240,7 +241,19 @@ export function calculateBestUpgrades(gameState, items, employees, upgradeStrate
 			return { ...c, value, density, sortingWeight };
 		})
 		.filter((c) => c.value > 0 || c.isOwned)
-		.sort((a, b) => b.sortingWeight - a.sortingWeight || b.density - a.density);
+		.sort((a, b) => {
+			const aIsMod =
+				MODIFIER_TYPES.includes(a.itemType) || (a.itemType && a.itemType.includes('water'));
+			const bIsMod =
+				MODIFIER_TYPES.includes(b.itemType) || (b.itemType && b.itemType.includes('water'));
+
+			if (a.sortingWeight === b.sortingWeight) {
+				if (aIsMod && !bIsMod) return 1;
+				if (!aIsMod && bIsMod) return -1;
+			}
+
+			return b.sortingWeight - a.sortingWeight || b.density - a.density;
+		});
 
 	// 4. Greedy Selection (Buy top items until out of money)
 	let remainingBudget = maxCapacity;
