@@ -173,14 +173,21 @@
 		return Array.from(map.entries()).map(([name, pic]) => ({ name, pic }));
 	});
 
-	let filteredTiles = $derived(
-		tiles.filter((t) => {
+	let filteredTiles = $derived.by(() => {
+		const shiftAmount = Number(gameState.bonus_equipment_manager?.shift_layers_up || 0);
+
+		return tiles.filter((t) => {
 			if (t.probability !== undefined && Number(t.probability) === 0) return false;
+
+			const layerIndex = LAYER_PROGRESSION.indexOf(t.layer);
+			if (layerIndex > 0 && layerIndex <= shiftAmount) return false;
+
 			if (gameState.calculatorHiddenLayers.includes(t.layer)) return false;
 			if (gameState.calculatorHiddenMaterials.includes(t.resource)) return false;
+
 			return true;
-		})
-	);
+		});
+	});
 
 	/** @type {Loadout[]} */
 	let typedLoadouts = $derived(gameState.calculatorLoadouts);
