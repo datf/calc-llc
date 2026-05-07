@@ -415,7 +415,7 @@
 							autofocus
 						>
 							{#each GAME_OPTIONS.maps as option}
-								<option value={option}>{option}</option>
+								<option value={option.level}>{option.map_name}</option>
 							{/each}
 						</select>
 					{:else}
@@ -423,7 +423,8 @@
 							onclick={() => (isEditingMap = true)}
 							class="theme-text hover:underline cursor-pointer"
 						>
-							{gameState.map}
+							{GAME_OPTIONS.maps.find((p) => p.level === gameState.map)?.map_name ||
+								gameState.level}
 						</button>
 					{/if}
 				</div>

@@ -1,4 +1,3 @@
-// $lib/calculator.js
 import { PASSIVE_KEYS } from './database.js';
 import { DPS_FORMULAS, STATUS_APPLIERS } from './formulas.js';
 import * as math from 'mathjs';

@@ -1,0 +1,485 @@
+[
+	{
+		"map_id": "funnel",
+		"level": 2,
+		"map_name": "Funnel",
+		"expansion_axis": "horizontal",
+		"tile_density": 1.0,
+		"layers": [
+			{
+				"level": 0,
+				"thickness_in_tiles": 20
+			},
+			{
+				"level": 1,
+				"thickness_in_tiles": 40
+			},
+			{
+				"level": 2,
+				"thickness_in_tiles": 10
+			},
+			{
+				"level": 3,
+				"thickness_in_tiles": 10
+			},
+			{
+				"level": 4,
+				"thickness_in_tiles": 50
+			},
+			{
+				"level": 5,
+				"thickness_in_tiles": 10
+			},
+			{
+				"level": 6,
+				"thickness_in_tiles": 20
+			},
+			{
+				"level": 7,
+				"thickness_in_tiles": 60
+			},
+			{
+				"level": 8,
+				"thickness_in_tiles": 10
+			},
+			{
+				"level": 9,
+				"thickness_in_tiles": 10
+			},
+			{
+				"level": 10,
+				"thickness_in_tiles": 30
+			},
+			{
+				"level": 11,
+				"thickness_in_tiles": 130
+			},
+			{
+				"level": 12,
+				"thickness_in_tiles": 100
+			},
+			{
+				"level": 13,
+				"thickness_in_tiles": 100
+			},
+			{
+				"level": 14,
+				"thickness_in_tiles": 100
+			}
+		]
+	},
+	{
+		"map_id": "tight_funnel",
+		"level": 3,
+		"map_name": "Tight Funnel",
+		"expansion_axis": "horizontal",
+		"tile_density": 1.0,
+		"layers": [
+			{
+				"level": 0,
+				"thickness_in_tiles": 6
+			},
+			{
+				"level": 1,
+				"thickness_in_tiles": 4
+			},
+			{
+				"level": 2,
+				"thickness_in_tiles": 4
+			},
+			{
+				"level": 3,
+				"thickness_in_tiles": 4
+			},
+			{
+				"level": 4,
+				"thickness_in_tiles": 4
+			},
+			{
+				"level": 5,
+				"thickness_in_tiles": 4
+			},
+			{
+				"level": 6,
+				"thickness_in_tiles": 4
+			},
+			{
+				"level": 7,
+				"thickness_in_tiles": 4
+			},
+			{
+				"level": 8,
+				"thickness_in_tiles": 4
+			},
+			{
+				"level": 9,
+				"thickness_in_tiles": 4
+			},
+			{
+				"level": 10,
+				"thickness_in_tiles": 4
+			},
+			{
+				"level": 11,
+				"thickness_in_tiles": 104
+			},
+			{
+				"level": 12,
+				"thickness_in_tiles": 50
+			},
+			{
+				"level": 13,
+				"thickness_in_tiles": 50
+			},
+			{
+				"level": 14,
+				"thickness_in_tiles": 50
+			}
+		]
+	},
+	{
+		"map_id": "sky_mine",
+		"level": 4,
+		"map_name": "Sky Mine",
+		"expansion_axis": "vertical",
+		"tile_density": 1.0,
+		"layers": [
+			{
+				"level": 0,
+				"thickness_in_tiles": 10
+			},
+			{
+				"level": 1,
+				"thickness_in_tiles": 20
+			},
+			{
+				"level": 2,
+				"thickness_in_tiles": 5
+			},
+			{
+				"level": 3,
+				"thickness_in_tiles": 5
+			},
+			{
+				"level": 4,
+				"thickness_in_tiles": 25
+			},
+			{
+				"level": 5,
+				"thickness_in_tiles": 5
+			},
+			{
+				"level": 6,
+				"thickness_in_tiles": 10
+			},
+			{
+				"level": 7,
+				"thickness_in_tiles": 30
+			},
+			{
+				"level": 8,
+				"thickness_in_tiles": 5
+			},
+			{
+				"level": 9,
+				"thickness_in_tiles": 5
+			},
+			{
+				"level": 10,
+				"thickness_in_tiles": 15
+			},
+			{
+				"level": 11,
+				"thickness_in_tiles": 165
+			},
+			{
+				"level": 12,
+				"thickness_in_tiles": 150
+			},
+			{
+				"level": 13,
+				"thickness_in_tiles": 150
+			},
+			{
+				"level": 14,
+				"thickness_in_tiles": 150
+			}
+		]
+	},
+	{
+		"map_id": "shallow",
+		"level": 5,
+		"map_name": "Shallow",
+		"expansion_axis": "vertical",
+		"tile_density": 1.0,
+		"layers": [
+			{
+				"level": 0,
+				"thickness_in_tiles": 1
+			},
+			{
+				"level": 1,
+				"thickness_in_tiles": 2
+			},
+			{
+				"level": 2,
+				"thickness_in_tiles": 2
+			},
+			{
+				"level": 3,
+				"thickness_in_tiles": 2
+			},
+			{
+				"level": 4,
+				"thickness_in_tiles": 2
+			},
+			{
+				"level": 5,
+				"thickness_in_tiles": 2
+			},
+			{
+				"level": 6,
+				"thickness_in_tiles": 2
+			},
+			{
+				"level": 7,
+				"thickness_in_tiles": 2
+			},
+			{
+				"level": 8,
+				"thickness_in_tiles": 2
+			},
+			{
+				"level": 9,
+				"thickness_in_tiles": 2
+			},
+			{
+				"level": 10,
+				"thickness_in_tiles": 2
+			},
+			{
+				"level": 11,
+				"thickness_in_tiles": 9
+			},
+			{
+				"level": 12,
+				"thickness_in_tiles": 10
+			},
+			{
+				"level": 13,
+				"thickness_in_tiles": 10
+			},
+			{
+				"level": 14,
+				"thickness_in_tiles": 10
+			}
+		]
+	},
+	{
+		"map_id": "standard",
+		"level": 0,
+		"map_name": "Standard",
+		"expansion_axis": "vertical",
+		"tile_density": 1.0,
+		"layers": [
+			{
+				"level": 0,
+				"thickness_in_tiles": 10
+			},
+			{
+				"level": 1,
+				"thickness_in_tiles": 20
+			},
+			{
+				"level": 2,
+				"thickness_in_tiles": 5
+			},
+			{
+				"level": 3,
+				"thickness_in_tiles": 5
+			},
+			{
+				"level": 4,
+				"thickness_in_tiles": 25
+			},
+			{
+				"level": 5,
+				"thickness_in_tiles": 5
+			},
+			{
+				"level": 6,
+				"thickness_in_tiles": 10
+			},
+			{
+				"level": 7,
+				"thickness_in_tiles": 30
+			},
+			{
+				"level": 8,
+				"thickness_in_tiles": 5
+			},
+			{
+				"level": 9,
+				"thickness_in_tiles": 5
+			},
+			{
+				"level": 10,
+				"thickness_in_tiles": 15
+			},
+			{
+				"level": 11,
+				"thickness_in_tiles": 165
+			},
+			{
+				"level": 12,
+				"thickness_in_tiles": 150
+			},
+			{
+				"level": 13,
+				"thickness_in_tiles": 150
+			},
+			{
+				"level": 14,
+				"thickness_in_tiles": 150
+			}
+		]
+	},
+	{
+		"map_id": "sky_mine_sparse",
+		"level": 6,
+		"map_name": "Sparse Sky Mine",
+		"expansion_axis": "vertical",
+		"tile_density": 0.65,
+		"layers": [
+			{
+				"level": 0,
+				"thickness_in_tiles": 10
+			},
+			{
+				"level": 1,
+				"thickness_in_tiles": 20
+			},
+			{
+				"level": 2,
+				"thickness_in_tiles": 5
+			},
+			{
+				"level": 3,
+				"thickness_in_tiles": 5
+			},
+			{
+				"level": 4,
+				"thickness_in_tiles": 25
+			},
+			{
+				"level": 5,
+				"thickness_in_tiles": 5
+			},
+			{
+				"level": 6,
+				"thickness_in_tiles": 10
+			},
+			{
+				"level": 7,
+				"thickness_in_tiles": 30
+			},
+			{
+				"level": 8,
+				"thickness_in_tiles": 5
+			},
+			{
+				"level": 9,
+				"thickness_in_tiles": 5
+			},
+			{
+				"level": 10,
+				"thickness_in_tiles": 15
+			},
+			{
+				"level": 11,
+				"thickness_in_tiles": 165
+			},
+			{
+				"level": 12,
+				"thickness_in_tiles": 150
+			},
+			{
+				"level": 13,
+				"thickness_in_tiles": 150
+			},
+			{
+				"level": 14,
+				"thickness_in_tiles": 150
+			}
+		]
+	},
+	{
+		"map_id": "sparse",
+		"level": 1,
+		"map_name": "Sparse",
+		"expansion_axis": "vertical",
+		"tile_density": 0.65,
+		"layers": [
+			{
+				"level": 0,
+				"thickness_in_tiles": 10
+			},
+			{
+				"level": 1,
+				"thickness_in_tiles": 20
+			},
+			{
+				"level": 2,
+				"thickness_in_tiles": 5
+			},
+			{
+				"level": 3,
+				"thickness_in_tiles": 5
+			},
+			{
+				"level": 4,
+				"thickness_in_tiles": 25
+			},
+			{
+				"level": 5,
+				"thickness_in_tiles": 5
+			},
+			{
+				"level": 6,
+				"thickness_in_tiles": 10
+			},
+			{
+				"level": 7,
+				"thickness_in_tiles": 30
+			},
+			{
+				"level": 8,
+				"thickness_in_tiles": 5
+			},
+			{
+				"level": 9,
+				"thickness_in_tiles": 5
+			},
+			{
+				"level": 10,
+				"thickness_in_tiles": 15
+			},
+			{
+				"level": 11,
+				"thickness_in_tiles": 165
+			},
+			{
+				"level": 12,
+				"thickness_in_tiles": 150
+			},
+			{
+				"level": 13,
+				"thickness_in_tiles": 150
+			},
+			{
+				"level": 14,
+				"thickness_in_tiles": 150
+			}
+		]
+	}
+]

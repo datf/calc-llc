@@ -21,6 +21,7 @@ import itemOrderRaw from '$lib/data/items_sorted.json';
 import employeesRaw from '$lib/data/employees.json';
 import passivesRaw from '$lib/data/passives.json';
 import tilesRaw from '$lib/data/tiles.json';
+import mapsRaw from '$lib/data/maps.json';
 
 export const passivesInfo = passivesRaw.all_passives;
 export const passiveMap = passivesRaw.passive_map;
@@ -90,6 +91,8 @@ export const items = new Map(sortedItemsRaw.map((e) => [e.itemID, parseBigInts(e
 export const employees = new Map(employeesRaw.map((e) => [e.employee_id, parseBigInts(e)]));
 
 export const tiles = tilesRaw;
+
+export const maps = new Map(mapsRaw.map((p) => [p.level, parseBigInts(p)]));
 
 export function getItemsForProfession(professionId) {
 	const prof = professions.get(professionId);

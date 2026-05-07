@@ -1,9 +1,9 @@
-import { items, employees, professions, PASSIVE_KEYS } from '$lib/database.js';
+import { items, employees, professions, maps, PASSIVE_KEYS } from '$lib/database.js';
 
 // Dropdown options
 export const GAME_OPTIONS = {
 	professions: Array.from(professions.values()),
-	maps: ['Tutorial', 'Coal Mine'],
+	maps: Array.from(maps.values()),
 	modes: ['Standard', 'Peaceful', 'Tough Start'],
 	roundTimes: [100, 200, 300]
 };
@@ -46,7 +46,7 @@ class GameState {
 	cash = $state(0n);
 	day = $state(1);
 	professionId = $state('INTERNSHIP');
-	map = $state('Tutorial');
+	map = $state(0);
 	mode = $state('Standard');
 	secondsPerRound = $state(300); // NEW: Default to 300s
 	hiredEmployees = $state({});
@@ -234,6 +234,19 @@ class GameState {
 					current_vacuum: 0,
 					shift_layers_up: 0
 				};
+			}
+
+			// 8. Level/map
+			if (saveJson.Gvars?.level !== undefined) {
+				const enumValue = saveJson.Gvars.level;
+				// Search through the values of the Map for the matching enum
+				const foundLevel = Array.from(maps.values()).find((p) => p.level === enumValue);
+
+				if (foundLevel) {
+					this.map = foundLevel.level;
+				} else {
+					console.warn(`[Save Loader] Level enum ${enumValue} not found in DB.`);
+				}
 			}
 
 			return true; // Success
