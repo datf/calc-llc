@@ -164,7 +164,13 @@
 
 	let materialOptions = $derived.by(() => {
 		const map = new Map();
+		const shiftAmount = Number(gameState.bonus_equipment_manager?.shift_layers_up || 0);
 		for (const t of tiles) {
+			const layerIndex = LAYER_PROGRESSION.indexOf(t.layer);
+			if (layerIndex > 0 && layerIndex <= shiftAmount) {
+				continue;
+			}
+
 			if (t.resource !== 'basic' && !map.has(t.resource)) {
 				const pic = t.pic_material_base64;
 				if (pic) map.set(t.resource, pic);

@@ -423,8 +423,7 @@
 							onclick={() => (isEditingMap = true)}
 							class="theme-text hover:underline cursor-pointer"
 						>
-							{GAME_OPTIONS.maps.find((p) => p.level === gameState.map)?.map_name ||
-								gameState.level}
+							{GAME_OPTIONS.maps.find((p) => p.level === gameState.map)?.map_name || gameState.map}
 						</button>
 					{/if}
 				</div>
