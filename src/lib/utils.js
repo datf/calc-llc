@@ -24,6 +24,11 @@ export function formatLargeNumber(value) {
 	return standardFormatter.format(bigValue);
 }
 
+export function formatDPS(dps) {
+	if (dps === 0) return '0 DPS';
+	return `${formatLargeNumber(Math.floor(dps))} DPS`;
+}
+
 const decimalFormatter = new Intl.NumberFormat('en-US', {
 	maximumFractionDigits: 2
 });
