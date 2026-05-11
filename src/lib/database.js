@@ -92,6 +92,55 @@ export const employees = new Map(employeesRaw.map((e) => [e.employee_id, parseBi
 
 export const tiles = tilesRaw;
 
+function groupTilesByLayer(tileMap) {
+	let grouped = tileMap.reduce((groupedLayers, tile) => {
+		const layerId = tile.layer || 'uncategorized';
+
+		if (tile.max_level > 0) {
+			if (!groupedLayers[layerId]) {
+				groupedLayers[layerId] = { tiles: [] };
+			}
+
+			groupedLayers[layerId]['tiles'].push(tile);
+		}
+
+		return groupedLayers;
+	}, {});
+
+	for (const layerId in grouped) {
+		const tiles = grouped[layerId].tiles;
+
+		const sortedTiles = [...tiles].sort((a, b) => a.health - b.health);
+
+		let accumulatedChance = 0;
+		let weightedHealthSum = 0;
+		let coalYield = 0;
+		let coalChance = 0;
+		const targetPercentile = 0.8;
+
+		for (const tile of sortedTiles) {
+			const spawnChance = tile.rarity / 2;
+			if (tile.resource == 'coal') {
+				coalYield = (tile.min_drop + tile.max_drop) / 2;
+				coalChance = spawnChance;
+			}
+
+			weightedHealthSum += tile.health * spawnChance;
+			accumulatedChance += spawnChance;
+			if (accumulatedChance > targetPercentile) break;
+		}
+
+		const actualPercentile = accumulatedChance > 0 ? accumulatedChance : 1;
+
+		grouped[layerId].avgHealth = weightedHealthSum / actualPercentile;
+		grouped[layerId].avgCoalYield = coalYield * coalChance;
+	}
+
+	return grouped;
+}
+
+export const tilesPerLayer = groupTilesByLayer(tiles);
+
 export const maps = new Map(mapsRaw.map((p) => [p.level, parseBigInts(p)]));
 
 export function getItemsForProfession(professionId) {

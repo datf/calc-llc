@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { calculateBestUpgrades } from './optimizer.js';
-import { items, employees } from './database.js';
+import { items, employees, tilesPerLayer } from './database.js';
+
+//BigInt.prototype.toJSON = function () {
+//	return this.toString();
+//};
 
 describe('Optimizer Integration (Real Items)', () => {
 	it('should correctly evaluate real game items using actual formulas', () => {
@@ -78,5 +82,51 @@ describe('Optimizer Integration (Real Items)', () => {
 		expect(shotgun.qty).toBe(1);
 
 		expect(option1.buy.totalSpent).toBe(1360n);
+	});
+});
+
+describe('Optimizer prerequisites', () => {
+	it('should correctly group layers and calculate averages', () => {
+		//console.log(JSON.stringify(tilesPerLayer['clay']));
+		const res = tilesPerLayer;
+		expect(res['clay']).toEqual(
+			expect.objectContaining({ avgCoalYield: 3.6, avgHealth: 151.78571428571428 })
+		);
+		expect(res['stone']).toEqual(
+			expect.objectContaining({ avgCoalYield: 153, avgHealth: 1448.780487804878 })
+		);
+		expect(res['ice']).toEqual(
+			expect.objectContaining({ avgCoalYield: 7515, avgHealth: 14717.647058823528 })
+		);
+		expect(res['fire']).toEqual(
+			expect.objectContaining({ avgCoalYield: 37575, avgHealth: 148965.5172413793 })
+		);
+		expect(res['dark']).toEqual(
+			expect.objectContaining({ avgCoalYield: 234379687.5, avgHealth: 13852272.727272727 })
+		);
+		expect(res['green']).toEqual(
+			expect.objectContaining({ avgCoalYield: 1171875234375, avgHealth: 1385227272.7272727 })
+		);
+		expect(res['orange']).toEqual(
+			expect.objectContaining({ avgCoalYield: 585937511718750, avgHealth: 138522727272.72726 })
+		);
+		expect(res['purple']).toEqual(
+			expect.objectContaining({ avgCoalYield: 2929687500585937400, avgHealth: 13852272727272.727 })
+		);
+		expect(res['darkgreen']).toEqual(
+			expect.objectContaining({ avgCoalYield: 1.4648437500029297e22, avgHealth: 13852272727272728 })
+		);
+		expect(res['yellow']).toEqual(
+			expect.objectContaining({
+				avgCoalYield: 7.324218750000001e29,
+				avgHealth: 13852272727272727000
+			})
+		);
+		expect(res['darkbrown']).toEqual(
+			expect.objectContaining({ avgCoalYield: 7.32421875e39, avgHealth: 1.385227272727273e24 })
+		);
+		expect(res['darkblue']).toEqual(
+			expect.objectContaining({ avgCoalYield: 7.32421875e55, avgHealth: 1.3852272727272726e31 })
+		);
 	});
 });

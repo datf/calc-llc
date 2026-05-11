@@ -65,6 +65,8 @@ class GameState {
 		shift_layers_up: 0
 	});
 
+	hard_modifier = $state(1);
+
 	calculatorHiddenMaterials = $state([]);
 	calculatorHiddenLayers = $state([]);
 
@@ -249,6 +251,13 @@ class GameState {
 				}
 			}
 
+			// 9. Hard modifiers
+			if (saveJson.hard_modifier) {
+				this.hard_modifier = saveJson.hard_modifier;
+			}
+
+			this.triggerAction('saveReloaded', saveJson);
+
 			return true; // Success
 		} catch (error) {
 			console.error('Failed to parse save data:', error);
@@ -261,6 +270,14 @@ class GameState {
 	]);
 	calculatorActiveLoadoutId = $state(1);
 	calculatorLoadoutCounter = $state(1);
+
+	actionBus = new EventTarget();
+	triggerAction(eventName, detail) {
+		const e = new CustomEvent(eventName, {
+			detail
+		});
+		this.actionBus.dispatchEvent(e);
+	}
 }
 
 export const gameState = new GameState();

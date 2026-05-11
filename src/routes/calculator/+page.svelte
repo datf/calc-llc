@@ -40,6 +40,7 @@
 		formatEmployeeName,
 		calculateBestUpgrades
 	} from '$lib/optimizer.js';
+	import { getContext } from 'svelte';
 
 	const LAYER_PROGRESSION = [
 		'dirt', // Base layer (Index 0)
@@ -316,6 +317,13 @@
 	let upgradeStrategy = $state('MAX_DPS');
 	let upgradeResults = $state([]);
 	let isCalculating = $state(false);
+
+	$effect(() => {
+		gameState.actionBus.addEventListener('saveReloaded', executeCalculation);
+		return () => {
+			gameState.actionBus.removeEventListener('saveReloaded', executeCalculation);
+		};
+	});
 
 	function executeCalculation() {
 		isCalculating = true;
