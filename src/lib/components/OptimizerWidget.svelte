@@ -1,43 +1,21 @@
 <script>
-	import { gameState } from '$lib/game.svelte.js';
-	import { getItemsForProfession, getOrgChart } from '$lib/database.js';
+	import { optimizer } from '$lib/optimizer/state.svelte.js';
 	import { formatLargeNumber, formatDPS } from '$lib/utils.js';
-	import { calculateBestUpgrades } from '$lib/optimizer.js';
 
 	let { compact = false, maxResults = 3 } = $props();
 
-	let upgradeStrategy = $state('MAX_DPS');
-	let upgradeResults = $state([]);
-	let isCalculating = $state(false);
+	// Derived value to handle the maxResults slicing purely for display
+	let displayResults = $derived(optimizer.results.slice(0, maxResults));
 
-	// Optionally calculate automatically when the component mounts
 	$effect(() => {
-		if (upgradeResults.length === 0) executeCalculation();
-
-		gameState.actionBus.addEventListener('saveReloaded', executeCalculation);
-		return () => {
-			gameState.actionBus.removeEventListener('saveReloaded', executeCalculation);
-		};
+		// Only run the calculation if we haven't done it yet
+		if (optimizer.results.length === 0 && !optimizer.isCalculating) {
+			optimizer.execute();
+		}
 	});
-
-	function executeCalculation() {
-		isCalculating = true;
-
-		setTimeout(() => {
-			const itemsForProfession = getItemsForProfession(gameState.professionId);
-			const itemsMap = new Map(itemsForProfession.map((e) => [e.itemID, e]));
-			const employeesForProfession = getOrgChart(gameState.professionId);
-			const employeeMap = new Map(employeesForProfession.map((e) => [e.employee_id, e]));
-
-			const results = calculateBestUpgrades(gameState, itemsMap, employeeMap, upgradeStrategy);
-			upgradeResults = results.slice(0, maxResults); // Slice based on the prop limit
-			isCalculating = false;
-		}, 50);
-	}
 </script>
 
 <div class="flex flex-col h-full">
-	<!-- Hide the controls if we are in compact dashboard mode -->
 	{#if !compact}
 		<div
 			class="flex flex-col md:flex-row gap-4 items-center justify-between bg-black/20 p-4 border theme-border rounded-xl mb-6"
@@ -45,7 +23,7 @@
 			<div class="flex items-center gap-3">
 				<span class="font-bold theme-text-muted text-sm uppercase tracking-wider">Strategy:</span>
 				<select
-					bind:value={upgradeStrategy}
+					bind:value={optimizer.strategy}
 					class="bg-black/40 border theme-border theme-text px-4 py-2 rounded focus:theme-border-hover outline-none font-bold"
 				>
 					<option value="MAX_DPS">Maximize DPS</option>
@@ -54,18 +32,18 @@
 				</select>
 			</div>
 			<button
-				onclick={executeCalculation}
-				disabled={isCalculating}
+				onclick={() => optimizer.execute()}
+				disabled={optimizer.isCalculating}
 				class="px-6 py-2 bg-yellow-600 hover:bg-yellow-500 text-black font-bold rounded shadow-[0_0_10px_rgba(202,138,4,0.4)] disabled:opacity-50 transition-colors"
 			>
-				{isCalculating ? 'Calculating...' : 'Re-calculate Upgrades'}
+				{optimizer.isCalculating ? 'Calculating...' : 'Re-calculate Upgrades'}
 			</button>
 		</div>
 	{/if}
 
-	{#if upgradeResults.length > 0}
+	{#if displayResults.length > 0}
 		<div class="grid grid-cols-1 {compact ? 'gap-4' : 'lg:grid-cols-3 gap-6'}">
-			{#each upgradeResults as option}
+			{#each displayResults as option}
 				<div
 					class="theme-surface border {option.id === 1
 						? 'theme-border-hover shadow-[0_0_15px_rgba(255,215,0,0.1)]'
@@ -166,7 +144,7 @@
 			class="text-center py-10 border border-dashed theme-border rounded-xl bg-black/10 h-full flex flex-col justify-center"
 		>
 			<h3 class="text-xl font-bold theme-text-muted mb-2">
-				{isCalculating ? 'Crunching numbers...' : 'Ready to analyze'}
+				{optimizer.isCalculating ? 'Crunching numbers...' : 'Ready to analyze'}
 			</h3>
 		</div>
 	{/if}
