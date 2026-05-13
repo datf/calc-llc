@@ -480,10 +480,12 @@
 
 		<nav class="flex gap-4 p-4 theme-surface border-b theme-border overflow-x-auto">
 			{#each navLinks as { href, label }}
+				{@const isActive =
+					href === '/' ? $page.url.pathname === '/' : $page.url.pathname.startsWith(href)}
 				<a
 					{href}
 					class="px-2 py-1 transition-all duration-200 border-b-2 whitespace-nowrap
-            {$page.url.pathname === href
+            {isActive
 						? 'theme-text-accent border-[var(--accent)] font-bold'
 						: 'theme-text-muted border-transparent hover:theme-text hover:border-[var(--border-main)]'}"
 				>

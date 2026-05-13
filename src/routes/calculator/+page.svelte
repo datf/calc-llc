@@ -1,309 +1,10 @@
 <script>
-	/**
-	 * @typedef {Object} LoadoutSource
-	 * @property {string} id
-	 * @property {string} name
-	 * @property {string} type
-	 * @property {any} data
-	 * @property {string[]} pics
-	 * @property {number} activeCount
-	 * @property {boolean} isStackable
-	 * @property {number} maxCount
-	 * @property {string} [category]
-	 */
-
-	/**
-	 * @typedef {Object} Loadout
-	 * @property {number} id
-	 * @property {string} name
-	 * @property {LoadoutSource | null} heldWeapon
-	 * @property {LoadoutSource[]} independents
-	 * @property {LoadoutSource[]} modifiers
-	 */
-
 	import { gameState } from '$lib/game.svelte.js';
-	import {
-		tiles,
-		items,
-		employees,
-		passiveMap,
-		getItemsForProfession,
-		getOrgChart
-	} from '$lib/database.js';
-	import { formatLargeNumber, formatDPS } from '$lib/utils.js';
-	import { calculateLoadoutDPS } from '$lib/calculator.js';
-	import {
-		IGNORED_TYPES,
-		INDEPENDENT_TYPES,
-		MODIFIER_TYPES,
-		NON_STACKABLE_TYPES,
-		formatEmployeeName,
-		calculateBestUpgrades
-	} from '$lib/optimizer.js';
-	import { getContext } from 'svelte';
+	import { formatLargeNumber } from '$lib/utils.js';
+	import { formatDPS, getTimeToDestroyInfo } from '$lib/utils.js';
+	import { CalculatorManager } from '$lib/calculator/state.svelte.js';
 
-	const LAYER_PROGRESSION = [
-		'dirt', // Base layer (Index 0)
-		'clay', // Index 1
-		'stone', // Index 2
-		'ice', // Index 3
-		'fire', // Index 4
-		'dark' // Index 5
-	];
-
-	let activeTab = $state('power');
-
-	// --- SOURCE LOGIC ---
-	let sources = $derived.by(() => {
-		let heldWeapons = [];
-		let independentSources = [];
-		let modifiers = [];
-
-		for (const [itemId, count] of Object.entries(gameState.inventory)) {
-			if (count > 0) {
-				const itemObj = items.get(itemId);
-				if (itemObj && itemObj.itemType && !IGNORED_TYPES.includes(itemObj.itemType)) {
-					const isStackable = !NON_STACKABLE_TYPES.includes(itemObj.itemType);
-
-					const sourceData = {
-						id: `item_${itemId}`,
-						name: itemObj.itemName || itemId,
-						type: 'equipment',
-						data: itemObj,
-						pics: [itemObj.picB64],
-						ownedCount: Number(count),
-						isStackable: isStackable,
-						maxCount: isStackable ? Number(count) : 1
-					};
-
-					if (MODIFIER_TYPES.includes(itemObj.itemType) || itemObj.itemType.includes('water')) {
-						modifiers.push({ ...sourceData, category: 'modifier' });
-					} else if (INDEPENDENT_TYPES.includes(itemObj.itemType)) {
-						independentSources.push({ ...sourceData, category: 'independent' });
-					} else {
-						heldWeapons.push({ ...sourceData, category: 'held' });
-					}
-				}
-			}
-		}
-
-		for (const [empId, count] of Object.entries(gameState.hiredEmployees)) {
-			if (count > 0n) {
-				const empObj = employees.get(empId);
-				if (empObj && empObj.type === '0') {
-					let compositePics = [];
-					if (empObj.legs_texture_base64) compositePics.push(empObj.legs_texture_base64);
-					if (empObj.torso_texture_base64) compositePics.push(empObj.torso_texture_base64);
-					if (empObj.head_texture_base64) compositePics.push(empObj.head_texture_base64);
-
-					let weaponStrength = 0;
-					if (empObj.equipment_itemID) {
-						const weaponObj = items.get(empObj.equipment_itemID);
-						if (weaponObj) {
-							if (weaponObj.picB64) compositePics.push(weaponObj.picB64);
-							weaponStrength = Number(weaponObj.Strength || weaponObj.damage || 0);
-						}
-					}
-
-					independentSources.push({
-						id: `emp_${empId}`,
-						name: formatEmployeeName(empObj.employee_id),
-						type: 'employee',
-						data: { ...empObj, weapon_strength: weaponStrength },
-						pics: compositePics,
-						category: 'independent',
-						ownedCount: Number(count),
-						isStackable: true,
-						maxCount: Number(count)
-					});
-				}
-			}
-		}
-
-		return { heldWeapons, independentSources, modifiers };
-	});
-
-	// --- TABLE FILTERS ---
-	function toggleLayerFilter(layer) {
-		if (gameState.calculatorHiddenLayers.includes(layer)) {
-			gameState.calculatorHiddenLayers = gameState.calculatorHiddenLayers.filter(
-				(l) => l !== layer
-			);
-		} else {
-			gameState.calculatorHiddenLayers = [...gameState.calculatorHiddenLayers, layer];
-		}
-	}
-
-	function toggleMaterialFilter(mat) {
-		if (gameState.calculatorHiddenMaterials.includes(mat)) {
-			gameState.calculatorHiddenMaterials = gameState.calculatorHiddenMaterials.filter(
-				(m) => m !== mat
-			);
-		} else {
-			gameState.calculatorHiddenMaterials = [...gameState.calculatorHiddenMaterials, mat];
-		}
-	}
-
-	let layerOptions = $derived.by(() => {
-		const map = new Map();
-		const shiftAmount = Number(gameState.bonus_equipment_manager?.shift_layers_up || 0);
-
-		for (const t of tiles) {
-			const layerIndex = LAYER_PROGRESSION.indexOf(t.layer);
-			if (layerIndex > 0 && layerIndex <= shiftAmount) {
-				continue;
-			}
-
-			if (!map.has(t.layer)) {
-				map.set(t.layer, t.pics_in_rock_base64?.[0]);
-			} else if (t.resource === 'basic') {
-				map.set(t.layer, t.pics_in_rock_base64?.[0]);
-			}
-		}
-		return Array.from(map.entries()).map(([name, pic]) => ({ name, pic }));
-	});
-
-	let materialOptions = $derived.by(() => {
-		const map = new Map();
-		const shiftAmount = Number(gameState.bonus_equipment_manager?.shift_layers_up || 0);
-		for (const t of tiles) {
-			const layerIndex = LAYER_PROGRESSION.indexOf(t.layer);
-			if (layerIndex > 0 && layerIndex <= shiftAmount) {
-				continue;
-			}
-
-			if (t.resource !== 'basic' && !map.has(t.resource)) {
-				const pic = t.pic_material_base64;
-				if (pic) map.set(t.resource, pic);
-			}
-		}
-		return Array.from(map.entries()).map(([name, pic]) => ({ name, pic }));
-	});
-
-	let filteredTiles = $derived.by(() => {
-		const shiftAmount = Number(gameState.bonus_equipment_manager?.shift_layers_up || 0);
-
-		return tiles.filter((t) => {
-			if (t.probability !== undefined && Number(t.probability) === 0) return false;
-
-			const layerIndex = LAYER_PROGRESSION.indexOf(t.layer);
-			if (layerIndex > 0 && layerIndex <= shiftAmount) return false;
-
-			if (gameState.calculatorHiddenLayers.includes(t.layer)) return false;
-			if (gameState.calculatorHiddenMaterials.includes(t.resource)) return false;
-
-			return true;
-		});
-	});
-
-	/** @type {Loadout[]} */
-	let typedLoadouts = $derived(gameState.calculatorLoadouts);
-
-	// --- LOADOUT BUILDER STATE ---
-	let activeLoadout = $derived(
-		typedLoadouts.find((l) => l.id === gameState.calculatorActiveLoadoutId) || typedLoadouts[0]
-	);
-
-	let activePassiveKeys = $derived.by(() => {
-		let keys = new Set();
-		const allActive = [...activeLoadout.modifiers, ...activeLoadout.independents];
-		if (activeLoadout.heldWeapon) allActive.push(activeLoadout.heldWeapon);
-
-		for (const source of allActive) {
-			const typeKey = source.type === 'equipment' ? source.data.itemType : 'employee';
-			const relatedPassives = passiveMap[typeKey] || [];
-			relatedPassives.forEach((p) => keys.add(p));
-		}
-		return keys;
-	});
-
-	/**
-	 * @param {LoadoutSource[]} sourceArray
-	 * @param {string} sourceId
-	 * @returns {LoadoutSource}
-	 */
-	function getActiveRef(sourceArray, sourceId) {
-		const found = sourceArray.find((s) => s.id === sourceId);
-		if (!found) throw new Error('Source must exist when rendered as active');
-		return found;
-	}
-
-	let nonZeroPassives = $derived.by(() => {
-		return Object.entries(gameState.passives)
-			.filter(([k, v]) => v > 0)
-			.map(([k, v]) => ({ key: k, name: k.split('_').join(' '), value: v }));
-	});
-
-	function addLoadout() {
-		gameState.calculatorLoadoutCounter++;
-		const newId = gameState.calculatorLoadoutCounter;
-		typedLoadouts.push({
-			id: newId,
-			name: `Loadout ${newId}`,
-			heldWeapon: null,
-			independents: /** @type {any[]} */ [],
-			modifiers: /** @type {any[]} */ []
-		});
-		gameState.calculatorActiveLoadoutId = newId;
-	}
-
-	function removeLoadout(id) {
-		if (typedLoadouts.length === 1) return;
-		typedLoadouts = typedLoadouts.filter((l) => l.id !== id);
-		if (gameState.calculatorActiveLoadoutId === id) {
-			gameState.calculatorActiveLoadoutId = typedLoadouts[0].id;
-		}
-	}
-
-	function toggleItemInLoadout(source) {
-		const loadout = typedLoadouts.find((l) => l.id === gameState.calculatorActiveLoadoutId);
-		if (!loadout) return;
-
-		const sourceClone = { ...source };
-
-		if (source.category === 'held') {
-			if (loadout.heldWeapon?.id === source.id) {
-				loadout.heldWeapon = null;
-			} else {
-				sourceClone.activeCount = 1;
-				loadout.heldWeapon = sourceClone;
-			}
-		} else if (source.category === 'modifier') {
-			const idx = loadout.modifiers.findIndex((s) => s.id === source.id);
-			if (idx >= 0) {
-				loadout.modifiers.splice(idx, 1);
-			} else {
-				sourceClone.activeCount = source.maxCount;
-				loadout.modifiers.push(sourceClone);
-			}
-		} else if (source.category === 'independent') {
-			const idx = loadout.independents.findIndex((s) => s.id === source.id);
-			if (idx >= 0) {
-				loadout.independents.splice(idx, 1);
-			} else {
-				sourceClone.activeCount = source.maxCount;
-				loadout.independents.push(sourceClone);
-			}
-		}
-	}
-
-	function isSourceActive(source) {
-		if (source.category === 'held') return activeLoadout.heldWeapon?.id === source.id;
-		if (source.category === 'modifier')
-			return activeLoadout.modifiers.some((s) => s.id === source.id);
-		if (source.category === 'independent')
-			return activeLoadout.independents.some((s) => s.id === source.id);
-		return false;
-	}
-
-	function getTimeToDestroyInfo(tile, dps, maxTime) {
-		if (dps === 0) return { text: '∞', color: 'theme-text-muted' };
-		const seconds = Number(tile.health) / dps;
-		if (seconds > maxTime) return { text: `>${maxTime}s`, color: 'text-red-500' };
-		else if (seconds > maxTime / 2)
-			return { text: `${seconds.toFixed(2)}s`, color: 'text-orange-400' };
-		else return { text: `${seconds.toFixed(2)}s`, color: 'theme-text-accent' };
-	}
+	const calc = new CalculatorManager();
 </script>
 
 <div class="mb-8 theme-surface border theme-border rounded-xl overflow-hidden">
@@ -311,7 +12,7 @@
 		<span class="theme-text-muted font-bold uppercase tracking-wider text-sm mr-2 shrink-0"
 			>Loadouts:</span
 		>
-		{#each typedLoadouts as loadout}
+		{#each calc.typedLoadouts as loadout}
 			<div
 				class="flex items-center theme-surface theme-surface-hover rounded-lg border {gameState.calculatorActiveLoadoutId ===
 				loadout.id
@@ -326,16 +27,16 @@
 				>
 					{loadout.name}
 				</button>
-				{#if typedLoadouts.length > 1}
+				{#if calc.typedLoadouts.length > 1}
 					<button
 						class="px-2 py-2 theme-text-muted hover:text-red-400"
-						onclick={() => removeLoadout(loadout.id)}>✕</button
+						onclick={() => calc.removeLoadout(loadout.id)}>✕</button
 					>
 				{/if}
 			</div>
 		{/each}
 		<button
-			onclick={addLoadout}
+			onclick={() => calc.addLoadout()}
 			class="px-4 py-2 theme-surface theme-surface-hover border theme-border theme-text-muted hover:theme-text rounded-lg font-bold shrink-0"
 		>
 			+ Add Loadout
@@ -344,7 +45,8 @@
 
 	<div class="p-6">
 		<p class="text-sm theme-text-muted mb-4">
-			Click items to toggle them for <strong class="theme-text-accent">{activeLoadout.name}</strong
+			Click items to toggle them for <strong class="theme-text-accent"
+				>{calc.activeLoadout.name}</strong
 			>. Adjust quantities using the inputs.
 		</p>
 
@@ -355,13 +57,13 @@
 					Status Modifiers
 				</h3>
 				<div class="flex flex-wrap gap-2">
-					{#each sources.modifiers as source}
+					{#each calc.sources.modifiers as source}
 						<div
 							role="button"
 							tabindex="0"
-							onclick={() => toggleItemInLoadout(source)}
-							onkeydown={(e) => e.key === 'Enter' && toggleItemInLoadout(source)}
-							class="flex items-center gap-2 px-2 py-1.5 rounded border cursor-pointer select-none {isSourceActive(
+							onclick={() => calc.toggleItemInLoadout(source)}
+							onkeydown={(e) => e.key === 'Enter' && calc.toggleItemInLoadout(source)}
+							class="flex items-center gap-2 px-2 py-1.5 rounded border cursor-pointer select-none {calc.isSourceActive(
 								source
 							)
 								? 'bg-blue-900/40 border-blue-400'
@@ -380,12 +82,12 @@
 							{/if}
 							<div class="flex flex-col text-left">
 								<span
-									class="text-xs font-bold {isSourceActive(source)
+									class="text-xs font-bold {calc.isSourceActive(source)
 										? 'theme-text'
 										: 'theme-text-muted'}">{source.name}</span
 								>
-								{#if isSourceActive(source)}
-									{@const activeRef = getActiveRef(activeLoadout.modifiers, source.id)}
+								{#if calc.isSourceActive(source)}
+									{@const activeRef = calc.getActiveRef(calc.activeLoadout.modifiers, source.id)}
 									{#if source.isStackable}
 										<div
 											class="mt-0.5 flex items-center gap-1"
@@ -426,13 +128,13 @@
 					Background DPS
 				</h3>
 				<div class="flex flex-wrap gap-2">
-					{#each sources.independentSources as source}
+					{#each calc.sources.independentSources as source}
 						<div
 							role="button"
 							tabindex="0"
-							onclick={() => toggleItemInLoadout(source)}
-							onkeydown={(e) => e.key === 'Enter' && toggleItemInLoadout(source)}
-							class="flex items-center gap-2 px-2 py-1.5 rounded border cursor-pointer select-none {isSourceActive(
+							onclick={() => calc.toggleItemInLoadout(source)}
+							onkeydown={(e) => e.key === 'Enter' && calc.toggleItemInLoadout(source)}
+							class="flex items-center gap-2 px-2 py-1.5 rounded border cursor-pointer select-none {calc.isSourceActive(
 								source
 							)
 								? 'bg-green-900/40 border-green-400'
@@ -451,12 +153,12 @@
 							{/if}
 							<div class="flex flex-col text-left">
 								<span
-									class="text-xs font-bold {isSourceActive(source)
+									class="text-xs font-bold {calc.isSourceActive(source)
 										? 'theme-text'
 										: 'theme-text-muted'}">{source.name}</span
 								>
-								{#if isSourceActive(source)}
-									{@const activeRef = getActiveRef(activeLoadout.independents, source.id)}
+								{#if calc.isSourceActive(source)}
+									{@const activeRef = calc.getActiveRef(calc.activeLoadout.independents, source.id)}
 									{#if source.isStackable}
 										<div
 											class="mt-0.5 flex items-center gap-1"
@@ -498,13 +200,13 @@
 					Held Weapon (Max 1)
 				</h3>
 				<div class="flex flex-wrap gap-2">
-					{#each sources.heldWeapons as source}
+					{#each calc.sources.heldWeapons as source}
 						<div
 							role="button"
 							tabindex="0"
-							onclick={() => toggleItemInLoadout(source)}
-							onkeydown={(e) => e.key === 'Enter' && toggleItemInLoadout(source)}
-							class="flex items-center gap-2 px-2 py-1.5 rounded border cursor-pointer select-none {isSourceActive(
+							onclick={() => calc.toggleItemInLoadout(source)}
+							onkeydown={(e) => e.key === 'Enter' && calc.toggleItemInLoadout(source)}
+							class="flex items-center gap-2 px-2 py-1.5 rounded border cursor-pointer select-none {calc.isSourceActive(
 								source
 							)
 								? 'bg-yellow-900/30 theme-border-hover shadow-[0_0_8px_rgba(255,215,0,0.3)]'
@@ -523,7 +225,7 @@
 							{/if}
 							<div class="flex flex-col text-left">
 								<span
-									class="text-xs font-bold {isSourceActive(source)
+									class="text-xs font-bold {calc.isSourceActive(source)
 										? 'theme-text'
 										: 'theme-text-muted'}">{source.name}</span
 								>
@@ -544,8 +246,8 @@
 					Active Passives Summary
 				</h3>
 				<div class="flex flex-wrap gap-2">
-					{#each nonZeroPassives as passive}
-						{@const isActive = activePassiveKeys.has(passive.key)}
+					{#each calc.nonZeroPassives as passive}
+						{@const isActive = calc.activePassiveKeys.has(passive.key)}
 						<div
 							class="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono border {isActive
 								? 'bg-purple-900/40 border-purple-400 theme-text shadow-[0_0_8px_rgba(168,85,247,0.2)]'
@@ -557,7 +259,7 @@
 							>
 						</div>
 					{/each}
-					{#if nonZeroPassives.length === 0}
+					{#if calc.nonZeroPassives.length === 0}
 						<span class="text-xs theme-text-muted italic">No passives upgraded yet.</span>
 					{/if}
 				</div>
@@ -573,9 +275,9 @@
 			Filter by Layer
 		</h3>
 		<div class="flex flex-wrap gap-2">
-			{#each layerOptions as layer}
+			{#each calc.layerOptions as layer}
 				<button
-					onclick={() => toggleLayerFilter(layer.name)}
+					onclick={() => calc.toggleLayerFilter(layer.name)}
 					class="flex items-center gap-1.5 px-2 py-1 rounded border text-xs font-bold select-none {gameState.calculatorHiddenLayers.includes(
 						layer.name
 					)
@@ -597,9 +299,9 @@
 			Filter by Material
 		</h3>
 		<div class="flex flex-wrap gap-2">
-			{#each materialOptions as mat}
+			{#each calc.materialOptions as mat}
 				<button
-					onclick={() => toggleMaterialFilter(mat.name)}
+					onclick={() => calc.toggleMaterialFilter(mat.name)}
 					class="flex items-center gap-1.5 px-2 py-1 rounded border text-xs font-bold select-none {gameState.calculatorHiddenMaterials.includes(
 						mat.name
 					)
@@ -627,14 +329,16 @@
 					class="p-4 border-b border-r theme-border min-w-[280px] sticky left-0 theme-surface z-20 shadow-[2px_0_5px_rgba(0,0,0,0.3)]"
 					>Loadout</th
 				>
-				{#each filteredTiles as tile}
+				{#each calc.filteredTiles as tile}
 					<th class="p-4 border-b theme-border min-w-[120px]">
 						<div class="flex items-center gap-2">
-							{#if tile.pics_in_rock_base64?.length > 0}<img
+							{#if tile.pics_in_rock_base64?.length > 0}
+								<img
 									src={tile.pics_in_rock_base64[0]}
 									alt={tile.resource}
 									class="w-6 h-6 rendering-pixelated object-contain"
-								/>{/if}
+								/>
+							{/if}
 							<div>
 								<div class="font-bold leading-tight capitalize">{tile.resource}</div>
 								<div class="text-[10px] theme-text-muted leading-tight capitalize">
@@ -644,15 +348,16 @@
 						</div>
 					</th>
 				{/each}
-				{#if filteredTiles.length === 0}<th
-						class="p-4 border-b theme-border theme-text-muted italic font-normal"
+				{#if calc.filteredTiles.length === 0}
+					<th class="p-4 border-b theme-border theme-text-muted italic font-normal"
 						>No tiles match current filters.</th
-					>{/if}
+					>
+				{/if}
 			</tr>
 		</thead>
 		<tbody class="text-sm divide-y divide-gray-700">
-			{#each typedLoadouts as loadout}
-				{@const rowDPS = calculateLoadoutDPS(loadout, gameState)}
+			{#each calc.typedLoadouts as loadout}
+				{@const rowDPS = calc.loadoutDPSMap.get(loadout.id) || 0}
 				{@const maxTime = gameState.secondsPerRound || 300}
 				{@const isEditing = gameState.calculatorActiveLoadoutId === loadout.id}
 
@@ -670,8 +375,9 @@
 									? 'theme-text-accent'
 									: 'theme-text hover:theme-text'}"
 								onclick={() => (gameState.calculatorActiveLoadoutId = loadout.id)}
-								>{loadout.name}</button
 							>
+								{loadout.name}
+							</button>
 							<div
 								class="text-xs font-mono theme-text theme-surface border theme-border px-2 py-1 rounded"
 							>
@@ -701,10 +407,12 @@
 											alt="mod"
 											class="absolute inset-0 w-full h-full object-contain rendering-pixelated"
 										/>{/each}
-									{#if mod.activeCount > 1}<span
+									{#if (mod.activeCount ?? 0) > 1}
+										<span
 											class="absolute -bottom-2 -right-2 theme-surface theme-text text-[9px] font-bold px-1 rounded-full border theme-border"
-											>x{formatLargeNumber(mod.activeCount)}</span
-										>{/if}
+											>x{formatLargeNumber(mod.activeCount ?? 1)}</span
+										>
+									{/if}
 								</div>
 							{/each}
 							{#each loadout.independents as ind}
@@ -726,7 +434,7 @@
 						</div>
 					</td>
 
-					{#each filteredTiles as tile}
+					{#each calc.filteredTiles as tile}
 						{@const ttk = getTimeToDestroyInfo(tile, rowDPS, maxTime)}
 						<td class="p-4 align-middle border-r theme-border last:border-r-0 text-center">
 							<div class="relative group cursor-help inline-block w-full">
@@ -737,11 +445,11 @@
 									<span class="text-[9px] theme-text-muted uppercase tracking-wider mb-1"
 										>Yield / Block</span
 									>
-									<span class="font-mono theme-text-accent font-bold text-sm"
-										>{tile.min_drop === tile.max_drop
+									<span class="font-mono theme-text-accent font-bold text-sm">
+										{tile.min_drop === tile.max_drop
 											? formatLargeNumber(tile.min_drop)
-											: `${formatLargeNumber(tile.min_drop)} - ${formatLargeNumber(tile.max_drop)}`}</span
-									>
+											: `${formatLargeNumber(tile.min_drop)} - ${formatLargeNumber(tile.max_drop)}`}
+									</span>
 									<div
 										class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-600"
 									></div>

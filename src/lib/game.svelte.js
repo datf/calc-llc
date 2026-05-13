@@ -266,6 +266,7 @@ class GameState {
 	}
 
 	calculatorLoadouts = $state([
+		/** @type {import('./calculator/state.svelte.js').Loadout[]} */
 		{ id: 1, name: 'Loadout 1', heldWeapon: null, independents: [], modifiers: [] }
 	]);
 	calculatorActiveLoadoutId = $state(1);

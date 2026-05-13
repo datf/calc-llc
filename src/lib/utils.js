@@ -36,3 +36,12 @@ const decimalFormatter = new Intl.NumberFormat('en-US', {
 export function formatDecimal(value) {
 	return decimalFormatter.format(value);
 }
+
+export function getTimeToDestroyInfo(tile, dps, maxTime) {
+	if (dps === 0) return { text: '∞', color: 'theme-text-muted' };
+	const seconds = Number(tile.health) / dps;
+	if (seconds > maxTime) return { text: `>${maxTime}s`, color: 'text-red-500' };
+	else if (seconds > maxTime / 2)
+		return { text: `${seconds.toFixed(2)}s`, color: 'text-orange-400' };
+	else return { text: `${seconds.toFixed(2)}s`, color: 'theme-text-accent' };
+}
