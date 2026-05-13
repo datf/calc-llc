@@ -9,6 +9,7 @@
 
 	const navLinks = [
 		{ href: resolve('/'), label: 'Welcome' },
+		{ href: resolve('/dashboard'), label: 'Dashboard' },
 		{ href: resolve('/employees'), label: 'Employees' },
 		{ href: resolve('/equipment'), label: 'Equipment' },
 		{ href: resolve('/passives'), label: 'Passives' },
