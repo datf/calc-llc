@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { calculateBestUpgrades } from './optimizer.js';
-import { items, employees, tilesPerLayer, getOrgChart } from './database.js';
+import { items, employees, tilesPerLayer, getOrgChart, getItemsForProfession } from './database.js';
 
 //BigInt.prototype.toJSON = function () {
 //	return this.toString();
@@ -109,9 +109,10 @@ describe('Optimizer Integration (Real Items)', () => {
 			inventory: {},
 			hiredEmployees: {},
 			passives: {},
+			professionId: 'GENERALIST_PLUS',
 			secondsPerRound: 300
 		};
-		const employeesForProfession = getOrgChart(20); // Generalist +
+		const employeesForProfession = getOrgChart(realGameState.professionId); // Generalist +
 		const employeeMap = new Map(employeesForProfession.map((e) => [e.employee_id, e]));
 
 		const results = calculateBestUpgrades(realGameState, items, employeeMap, 'MAX_DPS');
@@ -122,6 +123,29 @@ describe('Optimizer Integration (Real Items)', () => {
 
 		expect(miner).toBeDefined();
 		expect(miner.qty).toBe(1142);
+	});
+	it('should buy an orb for an Orbist', () => {
+		const realGameState = {
+			cash: 3000n,
+			inventory: {},
+			hiredEmployees: {},
+			passives: {},
+			professionId: 'ORBIST',
+			secondsPerRound: 100
+		};
+		const employeesForProfession = getOrgChart(realGameState.professionId);
+		const employeeMap = new Map(employeesForProfession.map((e) => [e.employee_id, e]));
+		const itemsForProfession = getItemsForProfession(realGameState.professionId);
+		const itemsMap = new Map(itemsForProfession.map((e) => [e.itemID, e]));
+
+		const results = calculateBestUpgrades(realGameState, itemsMap, employeeMap, 'MAX_DPS');
+		const option1 = results.find((opt) => opt.id === 1);
+		if (!option1) throw new Error('Option 1 was not found in results');
+
+		const miner = option1.buy.items.find((i) => i.name === 'Emerald Orb');
+
+		expect(miner).toBeDefined();
+		expect(miner.qty).toBe(1);
 	});
 });
 

@@ -25,6 +25,8 @@ export const DPS_FORMULAS = {
 	boxing_glove: 'damage * (1 + p_punch_damage) * (1 + p_punch_speed)',
 	roundhouse_kick: 'damage * (1 + p_kick_damage) * (1 + p_kick_speed)',
 
+	orb: 'damage * (1 + p_orb_damage)',
+
 	staff: '((missile_count / cooldown_secs) * missile_damage) * (1 + p_magic_missiles_damage)',
 
 	// Poison does damage per tick, but you only get a tick every 3s

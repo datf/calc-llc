@@ -86,7 +86,7 @@
 														alt="icon"
 														class="w-4 h-4 rendering-pixelated object-contain"
 													/>{/if}
-												<span class="theme-text-muted">{item.qty}x</span>
+												<span class="theme-text-muted">{item.qty} x</span>
 												{item.name}
 											</span>
 											<span class="text-red-300 font-mono">+{formatLargeNumber(item.total)}g</span>
@@ -116,7 +116,7 @@
 														alt="icon"
 														class="w-4 h-4 rendering-pixelated object-contain"
 													/>{/if}
-												<span class="theme-text-muted">{item.qty}x</span>
+												<span class="theme-text-muted">{item.qty} x</span>
 												{item.name}
 											</span>
 											<span class="text-green-300 font-mono">-{formatLargeNumber(item.total)}g</span
