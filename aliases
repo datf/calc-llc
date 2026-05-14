@@ -1,3 +1,3 @@
 alias pupb='podman compose up svelte-app --build'
 alias pupd='podman compose up svelte-app -d'
-alias dnpm='podman compose exec svelte-app npm'
+alias dnpm='podman compose exec svelte-app pnpm'

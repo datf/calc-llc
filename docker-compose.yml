@@ -22,18 +22,3 @@ services:
       - '4173:4173'
     environment:
       - NODE_ENV=production
-
-  pnpm-only:
-    command: sh
-    build:
-      context: .
-      dockerfile: Dockerfile.pnpm
-    ports:
-      - '5173:5173'
-      - '4173:4173'
-    volumes:
-      - .:/app
-      - /app/node_modules
-    environment:
-      - NODE_ENV=development
-      - CHOKIDAR_USEPOLLING=true
