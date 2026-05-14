@@ -147,6 +147,38 @@ describe('Optimizer Integration (Real Items)', () => {
 		expect(miner).toBeDefined();
 		expect(miner.qty).toBe(1);
 	});
+	it('should drop a collector to buy the amethyst shotgun', () => {
+		const silverShotgun = items.get('shotgun_06_silver');
+		const realGameState = {
+			cash: 19185n,
+			inventory: {
+				shotgun_06_silver: 1
+			},
+			hiredEmployees: {
+				SENIOR_COLLECTOR: 2n
+			},
+			passives: {},
+			professionId: 'INTERNSHIP',
+			secondsPerRound: 300
+		};
+		const employeesForProfession = getOrgChart(realGameState.professionId);
+		const employeeMap = new Map(employeesForProfession.map((e) => [e.employee_id, e]));
+		const itemsForProfession = getItemsForProfession(realGameState.professionId);
+		const itemsMap = new Map(itemsForProfession.map((e) => [e.itemID, e]));
+
+		const results = calculateBestUpgrades(realGameState, itemsMap, employeeMap, 'MAX_DPS');
+		const option1 = results.find((opt) => opt.id === 1);
+		if (!option1) throw new Error('Option 1 was not found in results');
+
+		const newShotgun = option1.buy.items.find((i) => i.name === 'Amethyst Shotgun');
+
+		expect(newShotgun).toBeDefined();
+
+		const soldItemNames = option1.sell.items.map((i) => i.name);
+
+		expect(soldItemNames).toContain('Silver Shotgun');
+		expect(soldItemNames).toContain('Senior Collector');
+	});
 });
 
 describe('Optimizer prerequisites', () => {

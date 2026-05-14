@@ -181,17 +181,19 @@ export function calculateBestUpgrades(gameState, items, baseEmployeesMap, upgrad
 
 	// 1. Calculate Sellable Inventory (Equipment)
 	for (const [id, count] of Object.entries(gameState.inventory)) {
-		if (count > 0) {
+		const safeCount = Number(String(count).replace('n', ''));
+
+		if (safeCount > 0) {
 			const item = items.get(id);
 			if (item && item.itemSellPrice) {
 				const sellPrice = BigInt(item.itemSellPrice);
-				totalSellValue += sellPrice * BigInt(count);
+				totalSellValue += sellPrice * BigInt(safeCount);
 
 				inventoryItems.push({
 					...item,
 					refId: id,
 					price: sellPrice,
-					qty: Number(count),
+					qty: safeCount,
 					isOwned: true,
 					isEmployee: false
 				});
@@ -201,20 +203,22 @@ export function calculateBestUpgrades(gameState, items, baseEmployeesMap, upgrad
 
 	// 1.5 Calculate Sellable Inventory (Employees)
 	for (const [id, count] of Object.entries(gameState.hiredEmployees)) {
-		if (count > 0n || count > 0) {
+		const safeCount = Number(String(count).replace('n', ''));
+
+		if (safeCount > 0) {
 			const emp = allEmployees.get(id);
 			if (emp) {
 				const costForSell = BigInt(emp.upgrade_cost || emp.price || 0);
 				const sellValue = costForSell / 2n;
 
-				totalSellValue += sellValue * BigInt(count);
+				totalSellValue += sellValue * BigInt(safeCount);
 
 				inventoryItems.push({
 					...emp,
 					name: formatEmployeeName(emp.employee_id),
 					refId: id,
 					price: sellValue,
-					qty: Number(count),
+					qty: safeCount,
 					isOwned: true,
 					isEmployee: true
 				});
@@ -369,10 +373,15 @@ export function calculateBestUpgrades(gameState, items, baseEmployeesMap, upgrad
 			return b.potentialBulkWeight - a.potentialBulkWeight || b.density - a.density;
 		});
 
-	// 5. Greedy Selection
-	let remainingBudget = maxCapacity;
+	// 5. Strict Ledger Greedy Selection
 	const optimalSelection = [];
 	let totalDPS = 0;
+	let currentLedgerCash = BigInt(gameState.cash || 0);
+	const ownedCandidates = candidates.filter((c) => c.isOwned);
+
+	for (const owned of ownedCandidates) {
+		currentLedgerCash += BigInt(owned.price) * BigInt(owned.qty || 1);
+	}
 
 	let hasHeldWeapon = false;
 	let hasPoison = false;
@@ -382,10 +391,11 @@ export function calculateBestUpgrades(gameState, items, baseEmployeesMap, upgrad
 	let hasWater = false;
 
 	for (const item of candidates) {
-		if (item.price > remainingBudget) continue;
+		const priceNum = Number(item.price);
+
+		if (item.price > currentLedgerCash) continue;
 
 		const itemTypeStr = item.itemType || '';
-
 		const isHeldWeapon =
 			!item.isEmployee &&
 			!INDEPENDENT_TYPES.includes(itemTypeStr) &&
@@ -421,55 +431,31 @@ export function calculateBestUpgrades(gameState, items, baseEmployeesMap, upgrad
 			if (slotName === 'water' && hasWater) continue;
 		}
 
-		if (isHeldWeapon && !item.isOwned) {
-			const budgetAfterThis = remainingBudget - item.price;
-			const topModifier = candidates.find((c) => {
-				const t = c.itemType || '';
-				return (MODIFIER_TYPES.includes(t) || t.includes('water')) && !c.isOwned;
-			});
+		const isStackable =
+			(!NON_STACKABLE_TYPES.includes(itemTypeStr) && !isHeldWeapon) || item.isEmployee;
+		const maxAffordable =
+			priceNum > 0 ? Math.floor(Number(currentLedgerCash) / priceNum) : item.isOwned ? item.qty : 1;
 
-			if (!hasWater && topModifier && topModifier.price > budgetAfterThis) {
-				let foundBetterCombo = false;
+		let qtyToProcess = item.isOwned
+			? Math.min(item.qty || 1, maxAffordable)
+			: isStackable
+				? maxAffordable
+				: 1;
 
-				for (const alt of candidates) {
-					const t = alt.itemType || '';
-					const isAltBase =
-						!alt.isEmployee &&
-						!INDEPENDENT_TYPES.includes(t) &&
-						!MODIFIER_TYPES.includes(t) &&
-						!t.includes('water') &&
-						!CONSUMABLE_TYPES.includes(t) &&
-						!IGNORED_TYPES.includes(t);
-
-					if (isAltBase && alt.refId !== item.refId && alt.price <= remainingBudget) {
-						const budgetAfterAlt = remainingBudget - alt.price;
-						if (topModifier.price <= budgetAfterAlt) {
-							const fullComboDps = getMemoizedItemDPS(
-								topModifier.refId,
-								false,
-								items,
-								allEmployees,
-								gameState,
-								alt.refId
-							);
-							if (fullComboDps > item.value) {
-								foundBetterCombo = true;
-								break;
-							}
-						}
-					}
+		if (qtyToProcess > 0) {
+			if (!item.isOwned) {
+				const projectedAddedDps = item.value * qtyToProcess;
+				if (projectedAddedDps < highestWeaponDPS * 0.05) {
+					continue;
 				}
-
-				if (foundBetterCombo) continue;
 			}
-		}
 
-		if (item.isOwned) {
-			const qtyToKeep = item.qty || 1;
-			optimalSelection.push({ ...item, qty: qtyToKeep });
+			optimalSelection.push({ ...item, qty: qtyToProcess });
 
-			remainingBudget -= item.price * BigInt(qtyToKeep);
-			totalDPS += item.value * qtyToKeep;
+			const totalCost = item.price * BigInt(qtyToProcess);
+			currentLedgerCash -= totalCost;
+
+			totalDPS += item.value * qtyToProcess;
 
 			if (slotName === 'held') hasHeldWeapon = true;
 			if (slotName === 'poison') hasPoison = true;
@@ -477,36 +463,6 @@ export function calculateBestUpgrades(gameState, items, baseEmployeesMap, upgrad
 			if (slotName === 'jet') hasJet = true;
 			if (slotName === 'kick') hasKick = true;
 			if (slotName === 'water') hasWater = true;
-		} else {
-			const isStackable =
-				(!NON_STACKABLE_TYPES.includes(itemTypeStr) && !isHeldWeapon) || item.isEmployee;
-
-			const priceNum = Number(item.price);
-			const budgetNum = Number(remainingBudget);
-			const maxAffordable = Math.floor(budgetNum / priceNum);
-
-			const qtyToBuy = isStackable ? maxAffordable : 1;
-
-			if (qtyToBuy > 0) {
-				// DYNAMIC POCKET CHANGE CHECK
-				// Prevents buying a few useless interns with the leftover change after buying miners
-				const projectedAddedDps = item.value * qtyToBuy;
-				if (projectedAddedDps < highestWeaponDPS * 0.05) {
-					continue;
-				}
-
-				optimalSelection.push({ ...item, qty: qtyToBuy });
-				const totalCost = item.price * BigInt(qtyToBuy);
-				remainingBudget -= totalCost;
-				totalDPS += item.value * qtyToBuy;
-
-				if (slotName === 'held') hasHeldWeapon = true;
-				if (slotName === 'poison') hasPoison = true;
-				if (slotName === 'fire') hasFire = true;
-				if (slotName === 'jet') hasJet = true;
-				if (slotName === 'kick') hasKick = true;
-				if (slotName === 'water') hasWater = true;
-			}
 		}
 	}
 
@@ -514,11 +470,20 @@ export function calculateBestUpgrades(gameState, items, baseEmployeesMap, upgrad
 	const toBuy = optimalSelection.filter((i) => !i.isOwned);
 	const totalSpent = toBuy.reduce((sum, i) => sum + i.price * BigInt(i.qty || 1), 0n);
 
-	const keptIds = new Set();
-	optimalSelection.filter((i) => i.isOwned).forEach((i) => keptIds.add(i.refId));
+	const toSell = [];
+	for (const inv of inventoryItems) {
+		const kept = optimalSelection.find(
+			(i) => i.isOwned && i.refId === inv.refId && i.isEmployee === inv.isEmployee
+		);
+		const keptQty = kept ? kept.qty || 1 : 0;
 
-	let tempInv = [...inventoryItems];
-	const toSell = tempInv.filter((t) => !keptIds.has(t.refId));
+		const sellQty = inv.qty - keptQty;
+
+		if (sellQty > 0) {
+			toSell.push({ ...inv, qty: sellQty });
+		}
+	}
+
 	const totalEarned = toSell.reduce((sum, i) => sum + i.price * BigInt(i.qty || 1), 0n);
 
 	const groupItems = (arr) => {
