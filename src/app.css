@@ -70,6 +70,29 @@ body {
 	color: var(--text-muted);
 }
 
+::-webkit-scrollbar {
+	width: 6px;
+	height: 6px;
+}
+
+::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+	background-color: var(--border-main, #4b5563);
+	border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background-color: var(--text-accent, #fbbf24);
+}
+
+* {
+	scrollbar-color: var(--border-main, #4b5563) transparent;
+	scrollbar-width: thin;
+}
+
 @layer components {
 	/* Enforces uniform padding and centering across every page */
 	.page-wrapper {

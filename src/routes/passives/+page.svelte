@@ -124,9 +124,7 @@
 				</h2>
 
 				<!-- Added max height and vertical scrolling so it doesn't break the page height -->
-				<div
-					class="theme-surface p-4 rounded border theme-border max-h-[75vh] overflow-y-auto custom-scrollbar"
-				>
+				<div class="theme-surface p-4 rounded border theme-border max-h-[75vh] overflow-y-auto">
 					<div class="flex flex-col gap-4 pr-1">
 						{#each PASSIVE_KEYS as key}
 							<div class="flex flex-col bg-black/20 p-3 rounded border theme-border">
@@ -156,20 +154,3 @@
 		</div>
 	</div>
 </div>
-
-<style>
-	/* Small custom scrollbar styling to make the Passives panel look neat */
-	.custom-scrollbar::-webkit-scrollbar {
-		width: 6px;
-	}
-	.custom-scrollbar::-webkit-scrollbar-track {
-		background: transparent;
-	}
-	.custom-scrollbar::-webkit-scrollbar-thumb {
-		background-color: var(--border-main, #4b5563);
-		border-radius: 10px;
-	}
-	.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-		background-color: var(--text-accent, #fbbf24);
-	}
-</style>
