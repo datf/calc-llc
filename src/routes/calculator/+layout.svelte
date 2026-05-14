@@ -1,6 +1,11 @@
 <script>
 	import { page } from '$app/stores';
+	import { resolve } from '$app/paths';
+
 	let { children } = $props();
+
+	const calculatorPath = resolve('/calculator');
+	const suggestionsPath = resolve('/calculator/suggestions');
 </script>
 
 <div class="page-wrapper page-wide">
@@ -16,16 +21,16 @@
 	<!-- TABS NAVIGATION -->
 	<div class="flex gap-2 border-b theme-border pb-px">
 		<a
-			href="/calculator"
-			class="px-6 py-3 font-bold rounded-t-lg {$page.url.pathname === '/calculator'
+			href={calculatorPath}
+			class="px-6 py-3 font-bold rounded-t-lg {$page.url.pathname === calculatorPath
 				? 'theme-surface theme-surface-hover theme-text-accent border-t border-l border-r theme-border'
 				: 'theme-surface theme-text-muted hover:theme-text'}"
 		>
 			Current Power
 		</a>
 		<a
-			href="/calculator/suggestions"
-			class="px-6 py-3 font-bold rounded-t-lg {$page.url.pathname === '/calculator/suggestions'
+			href={suggestionsPath}
+			class="px-6 py-3 font-bold rounded-t-lg {$page.url.pathname === suggestionsPath
 				? 'theme-surface theme-surface-hover theme-text-accent border-t border-l border-r theme-border'
 				: 'theme-surface theme-text-muted hover:theme-text'}"
 		>
