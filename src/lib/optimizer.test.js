@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { calculateBestUpgrades } from './optimizer.js';
-import { items, employees, tilesPerLayer } from './database.js';
+import { items, employees, tilesPerLayer, getOrgChart } from './database.js';
 
 //BigInt.prototype.toJSON = function () {
 //	return this.toString();
@@ -82,6 +82,46 @@ describe('Optimizer Integration (Real Items)', () => {
 		expect(shotgun.qty).toBe(1);
 
 		expect(option1.buy.totalSpent).toBe(1360n);
+	});
+	it('should buy miners rather than spinel pistol when miner damage is buffed', () => {
+		const realGameState = {
+			cash: 300000000n,
+			inventory: {},
+			hiredEmployees: {},
+			passives: { employee_miner_damage: 999999n },
+			secondsPerRound: 300
+		};
+		const employeesForProfession = getOrgChart(20); // Generalist +
+		const employeeMap = new Map(employeesForProfession.map((e) => [e.employee_id, e]));
+
+		const results = calculateBestUpgrades(realGameState, items, employeeMap, 'MAX_DPS');
+		const option1 = results.find((opt) => opt.id === 1);
+		if (!option1) throw new Error('Option 1 was not found in results');
+
+		const miner = option1.buy.items.find((i) => i.name === 'Senior Vp Miner');
+
+		expect(miner).toBeDefined();
+		expect(miner.qty).toBe(1142);
+	});
+	it('should buy miners rather than spinel pistol in general', () => {
+		const realGameState = {
+			cash: 300000000n,
+			inventory: {},
+			hiredEmployees: {},
+			passives: {},
+			secondsPerRound: 300
+		};
+		const employeesForProfession = getOrgChart(20); // Generalist +
+		const employeeMap = new Map(employeesForProfession.map((e) => [e.employee_id, e]));
+
+		const results = calculateBestUpgrades(realGameState, items, employeeMap, 'MAX_DPS');
+		const option1 = results.find((opt) => opt.id === 1);
+		if (!option1) throw new Error('Option 1 was not found in results');
+
+		const miner = option1.buy.items.find((i) => i.name === 'Senior Vp Miner');
+
+		expect(miner).toBeDefined();
+		expect(miner.qty).toBe(1142);
 	});
 });
 

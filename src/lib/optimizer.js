@@ -1,3 +1,5 @@
+/** @typedef {import('./calculator/state.svelte.js').Loadout} Loadout */
+/** @typedef {import('./calculator/state.svelte.js').LoadoutSource} LoadoutSource */
 import { calculateLoadoutDPS, CONSUMABLE_TYPES } from './calculator.js';
 
 // --- CATEGORIZATION CONSTANTS ---
@@ -41,6 +43,38 @@ export function formatEmployeeName(id) {
 }
 
 /**
+ * Flattens the hierarchical employee tree (promotions) into a single Map,
+ * calculating the cumulative cost top-down for each tier.
+ */
+function flattenEmployeeTree(baseEmployeesMap) {
+	const flatMap = new Map();
+
+	function traverse(emp, accumulatedCost) {
+		if (!emp || !emp.employee_id) return;
+
+		const cost = BigInt(emp.upgrade_cost || emp.price || 0);
+		const totalCumulative = accumulatedCost + cost;
+
+		flatMap.set(emp.employee_id, {
+			...emp,
+			_cumulativeCost: totalCumulative
+		});
+
+		if (emp.promotions && Array.isArray(emp.promotions)) {
+			for (const child of emp.promotions) {
+				traverse(child, totalCumulative);
+			}
+		}
+	}
+
+	for (const emp of baseEmployeesMap.values()) {
+		traverse(emp, 0n);
+	}
+
+	return flatMap;
+}
+
+/**
  * Calculates the DPS value for a single item/employee. Memoized for performance.
  */
 export function getMemoizedItemDPS(
@@ -54,13 +88,32 @@ export function getMemoizedItemDPS(
 	const cacheKey = id + (baseWeaponId ? `_base_${baseWeaponId}` : '');
 	if (dpsCache.has(cacheKey)) return dpsCache.get(cacheKey);
 
-	/** @type {{ independents: any[], modifiers: any[], heldWeapon: any }} */
-	let mockLoadout = { independents: [], modifiers: [], heldWeapon: null };
+	// Ensure mockLoadout matches the Loadout type structure
+	/** @type {Loadout} */
+	let mockLoadout = {
+		id: 999,
+		name: 'Mock',
+		independents: /** @type {LoadoutSource[]} */ ([]),
+		modifiers: /** @type {LoadoutSource[]} */ ([]),
+		heldWeapon: null
+	};
 
 	if (baseWeaponId) {
 		const baseItem = items.get(baseWeaponId);
 		if (baseItem) {
-			const sourceData = { type: 'equipment', data: baseItem, activeCount: 1 };
+			/** @type {LoadoutSource} */
+			const sourceData = {
+				id: `item_${baseWeaponId}`,
+				name: baseItem.itemName || baseWeaponId,
+				type: 'equipment',
+				data: baseItem,
+				pics: [baseItem.picB64 || ''],
+				activeCount: 1,
+				isStackable: !NON_STACKABLE_TYPES.includes(baseItem.itemType),
+				maxCount: 1,
+				ownedCount: 1
+			};
+
 			if (INDEPENDENT_TYPES.includes(baseItem.itemType)) {
 				mockLoadout.independents.push(sourceData);
 			} else {
@@ -72,16 +125,36 @@ export function getMemoizedItemDPS(
 	if (isEmployee) {
 		const emp = employees.get(id);
 		if (emp) {
-			mockLoadout.independents.push({
+			/** @type {LoadoutSource} */
+			const empSource = {
+				id: `emp_${id}`,
+				name: formatEmployeeName(emp.employee_id),
 				type: 'employee',
 				data: { ...emp, weapon_strength: Number(items.get(emp.equipment_itemID)?.Strength || 0) },
-				activeCount: 1
-			});
+				pics: [], // Assuming mock evaluation doesn't need pics
+				activeCount: 1,
+				isStackable: true,
+				maxCount: 1,
+				ownedCount: 1
+			};
+			mockLoadout.independents.push(empSource);
 		}
 	} else {
 		const item = items.get(id);
 		if (item && !IGNORED_TYPES.includes(item.itemType)) {
-			const sourceData = { type: 'equipment', data: item, activeCount: 1 };
+			/** @type {LoadoutSource} */
+			const sourceData = {
+				id: `item_${id}`,
+				name: item.itemName || id,
+				type: 'equipment',
+				data: item,
+				pics: [item.picB64 || ''],
+				activeCount: 1,
+				isStackable: !NON_STACKABLE_TYPES.includes(item.itemType),
+				maxCount: 1,
+				ownedCount: 1
+			};
+
 			if (MODIFIER_TYPES.includes(item.itemType) || item.itemType.includes('water')) {
 				mockLoadout.modifiers.push(sourceData);
 			} else if (INDEPENDENT_TYPES.includes(item.itemType)) {
@@ -93,61 +166,65 @@ export function getMemoizedItemDPS(
 	}
 
 	const dps = calculateLoadoutDPS(mockLoadout, gameState, true);
-	dpsCache.set(id, dps);
+	dpsCache.set(cacheKey, dps);
 	return dps;
 }
 
-export function calculateBestUpgrades(gameState, items, employees, upgradeStrategy) {
+export function calculateBestUpgrades(gameState, items, baseEmployeesMap, upgradeStrategy) {
 	dpsCache.clear();
+
+	const allEmployees = flattenEmployeeTree(baseEmployeesMap);
+
 	const inventoryItems = [];
 	const shopItems = [];
-	let totalSellValue = 0n; // Use BigInt explicitly
+	let totalSellValue = 0n;
 
-	// 1. Calculate Sellable Inventory
+	// 1. Calculate Sellable Inventory (Equipment)
 	for (const [id, count] of Object.entries(gameState.inventory)) {
 		if (count > 0) {
 			const item = items.get(id);
 			if (item && item.itemSellPrice) {
 				const sellPrice = BigInt(item.itemSellPrice);
 				totalSellValue += sellPrice * BigInt(count);
-				for (let i = 0; i < count; i++) {
-					inventoryItems.push({
-						...item,
-						refId: id,
-						price: sellPrice,
-						isOwned: true,
-						isEmployee: false
-					});
-				}
+
+				inventoryItems.push({
+					...item,
+					refId: id,
+					price: sellPrice,
+					qty: Number(count),
+					isOwned: true,
+					isEmployee: false
+				});
 			}
 		}
 	}
 
-	// Active employees -> inventory representation
+	// 1.5 Calculate Sellable Inventory (Employees)
 	for (const [id, count] of Object.entries(gameState.hiredEmployees)) {
 		if (count > 0n || count > 0) {
-			const emp = employees.get(id);
-			if (emp && emp.price) {
-				// Example logic: sell price is half of buy price
-				const sellValue = BigInt(emp.price) / 2n;
+			const emp = allEmployees.get(id);
+			if (emp) {
+				const costForSell = BigInt(emp.upgrade_cost || emp.price || 0);
+				const sellValue = costForSell / 2n;
+
 				totalSellValue += sellValue * BigInt(count);
-				for (let i = 0; i < Number(count); i++) {
-					inventoryItems.push({
-						...emp,
-						name: formatEmployeeName(emp.employee_id),
-						refId: id,
-						price: sellValue,
-						isOwned: true,
-						isEmployee: true
-					});
-				}
+
+				inventoryItems.push({
+					...emp,
+					name: formatEmployeeName(emp.employee_id),
+					refId: id,
+					price: sellValue,
+					qty: Number(count),
+					isOwned: true,
+					isEmployee: true
+				});
 			}
 		}
 	}
 
 	const maxCapacity = BigInt(gameState.cash || 0) + totalSellValue;
 
-	// 2. Filter unaffordable shop items
+	// 2. Filter unaffordable shop items (Equipment)
 	for (const [id, item] of items.entries()) {
 		if (item.itemBuyPrice) {
 			const buyPrice = BigInt(item.itemBuyPrice);
@@ -157,14 +234,30 @@ export function calculateBestUpgrades(gameState, items, employees, upgradeStrate
 		}
 	}
 
-	// 2.5 Find Best Affordable Base Weapon (Pass 1 - For Modifier Evaluation)
+	// 2.5 Filter unaffordable shop items (Employees)
+	for (const [id, emp] of allEmployees.entries()) {
+		if (emp.type === '0') {
+			const cumulativeBuyPrice = emp._cumulativeCost;
+
+			if (cumulativeBuyPrice > 0n && cumulativeBuyPrice <= maxCapacity) {
+				shopItems.push({
+					...emp,
+					name: formatEmployeeName(emp.employee_id),
+					refId: id,
+					price: cumulativeBuyPrice,
+					isOwned: false,
+					isEmployee: true
+				});
+			}
+		}
+	}
+
+	// 3. Find Best Affordable Base Weapon (For Modifier Evaluation)
 	let bestBaseWeaponItem = null;
 	let highestWeaponDPS = 0;
 
 	for (const item of [...shopItems, ...inventoryItems]) {
 		const itemTypeStr = item.itemType || '';
-
-		// Allow held weapons AND independent weapons (like poison_gun) to be the baseline
 		const isBaseWeapon =
 			!item.isEmployee &&
 			!MODIFIER_TYPES.includes(itemTypeStr) &&
@@ -172,7 +265,7 @@ export function calculateBestUpgrades(gameState, items, employees, upgradeStrate
 			!CONSUMABLE_TYPES.includes(itemTypeStr);
 
 		if (isBaseWeapon) {
-			const dps = getMemoizedItemDPS(item.refId, false, items, employees, gameState);
+			const dps = getMemoizedItemDPS(item.refId, false, items, allEmployees, gameState);
 			if (dps > highestWeaponDPS) {
 				highestWeaponDPS = dps;
 				bestBaseWeaponItem = item;
@@ -180,17 +273,37 @@ export function calculateBestUpgrades(gameState, items, employees, upgradeStrate
 		}
 	}
 
-	// 3. Calculate Values and Densities
+	// 4. Calculate Values and Densities
 	const roundDuration = Number(gameState.secondsPerRound || 300);
 
 	const candidates = [...shopItems, ...inventoryItems]
 		.map((c) => {
 			let value = 0;
 			let sortingWeight = 0;
+			const priceAsNumber = Number(c.price);
+
+			const itemTypeStr = c.itemType || '';
+			const isHeldWeapon =
+				!c.isEmployee &&
+				!INDEPENDENT_TYPES.includes(itemTypeStr) &&
+				!MODIFIER_TYPES.includes(itemTypeStr) &&
+				!itemTypeStr.includes('water') &&
+				!CONSUMABLE_TYPES.includes(itemTypeStr) &&
+				!IGNORED_TYPES.includes(itemTypeStr);
+
+			// CORRECT STACKABILITY: Weapons are NEVER stackable!
+			const isStackable =
+				c.isEmployee || (!NON_STACKABLE_TYPES.includes(itemTypeStr) && !isHeldWeapon);
+
+			// If we own it, we evaluate its bulk potential based on how many we actually own
+			const maxAffordable = c.isOwned
+				? c.qty || 1
+				: isStackable && priceAsNumber > 0
+					? Math.floor(Number(maxCapacity) / priceAsNumber)
+					: 1;
 
 			if (upgradeStrategy === 'MAX_DPS') {
-				const isModifier =
-					MODIFIER_TYPES.includes(c.itemType) || (c.itemType && c.itemType.includes('water'));
+				const isModifier = MODIFIER_TYPES.includes(itemTypeStr) || itemTypeStr.includes('water');
 				let rawDpsOrDamage = 0;
 
 				if (isModifier && bestBaseWeaponItem) {
@@ -198,27 +311,32 @@ export function calculateBestUpgrades(gameState, items, employees, upgradeStrate
 						c.refId,
 						c.isEmployee,
 						items,
-						employees,
+						allEmployees,
 						gameState,
 						bestBaseWeaponItem.refId
 					);
 					rawDpsOrDamage = Math.max(0, comboDps - highestWeaponDPS);
 				} else {
-					rawDpsOrDamage = getMemoizedItemDPS(c.refId, c.isEmployee, items, employees, gameState);
+					rawDpsOrDamage = getMemoizedItemDPS(
+						c.refId,
+						c.isEmployee,
+						items,
+						allEmployees,
+						gameState
+					);
 				}
 
-				const SIGNIFICANCE_THRESHOLD = 0.15; // 15%
+				// Measure the DPS potential of the ENTIRE stack
+				let potentialBulkDps = rawDpsOrDamage * maxAffordable;
 
-				const isAutonomous = c.isEmployee;
+				const SIGNIFICANCE_THRESHOLD = 0.25;
 
-				if (!isAutonomous) {
-					if (rawDpsOrDamage < highestWeaponDPS * SIGNIFICANCE_THRESHOLD) {
-						rawDpsOrDamage = 0;
-					}
+				if (potentialBulkDps < highestWeaponDPS * SIGNIFICANCE_THRESHOLD) {
+					rawDpsOrDamage = 0;
 				}
 				value = rawDpsOrDamage;
 
-				const isConsumable = !c.isEmployee && CONSUMABLE_TYPES.includes(c.itemType);
+				const isConsumable = !c.isEmployee && CONSUMABLE_TYPES.includes(itemTypeStr);
 				sortingWeight = isConsumable ? rawDpsOrDamage : rawDpsOrDamage * roundDuration;
 			} else if (upgradeStrategy === 'COLLECTION') {
 				value = c.isOwned ? 1 : 100;
@@ -228,16 +346,12 @@ export function calculateBestUpgrades(gameState, items, employees, upgradeStrate
 				sortingWeight = value;
 			}
 
-			const priceAsNumber = Number(c.price);
-
-			// If we already own the item, don't penalize its density by its sell price.
-			// Give owned items massive density so they aren't downgraded pointlessly
-			// This prevents "downgrading" to a cheaper shop item with identical DPS just for pocket change.
+			// PURE BULK SORTING WEIGHT: Prioritizes max affordable DPS to solve 0-1 Knapsack
+			const potentialBulkWeight = sortingWeight * maxAffordable;
 			const densityPrice = c.isOwned ? 0 : priceAsNumber;
-
 			const density = densityPrice > 0 ? sortingWeight / densityPrice : sortingWeight * 999999999;
 
-			return { ...c, value, density, sortingWeight };
+			return { ...c, value, density, sortingWeight, potentialBulkWeight };
 		})
 		.filter((c) => c.value > 0 || c.isOwned)
 		.sort((a, b) => {
@@ -251,10 +365,11 @@ export function calculateBestUpgrades(gameState, items, employees, upgradeStrate
 				if (!aIsMod && bIsMod) return -1;
 			}
 
-			return b.sortingWeight - a.sortingWeight || b.density - a.density;
+			// Sort by Maximum Affordable DPS First, fallback to pure density
+			return b.potentialBulkWeight - a.potentialBulkWeight || b.density - a.density;
 		});
 
-	// 4. Greedy Selection (Buy top items until out of money)
+	// 5. Greedy Selection
 	let remainingBudget = maxCapacity;
 	const optimalSelection = [];
 	let totalDPS = 0;
@@ -270,6 +385,7 @@ export function calculateBestUpgrades(gameState, items, employees, upgradeStrate
 		if (item.price > remainingBudget) continue;
 
 		const itemTypeStr = item.itemType || '';
+
 		const isHeldWeapon =
 			!item.isEmployee &&
 			!INDEPENDENT_TYPES.includes(itemTypeStr) &&
@@ -278,35 +394,43 @@ export function calculateBestUpgrades(gameState, items, employees, upgradeStrate
 			!CONSUMABLE_TYPES.includes(itemTypeStr) &&
 			!IGNORED_TYPES.includes(itemTypeStr);
 
-		// Identify if this item fills an exclusive action/effect slot
-		const isPoison = itemTypeStr.includes('poison');
-		const isFire = itemTypeStr.includes('flame') || itemTypeStr.includes('fire');
-		const isJet = itemTypeStr.includes('jet');
-		const isKick = itemTypeStr.includes('kick'); // catches 'roundhouse_kick'
-		const isWater = itemTypeStr.includes('water') || MODIFIER_TYPES.includes(itemTypeStr);
+		const isPoison = !item.isEmployee && itemTypeStr.includes('poison');
+		const isFire =
+			!item.isEmployee && (itemTypeStr.includes('flame') || itemTypeStr.includes('fire'));
+		const isJet = !item.isEmployee && itemTypeStr.includes('jet');
+		const isKick = !item.isEmployee && itemTypeStr.includes('kick');
+		const isWater =
+			!item.isEmployee && (itemTypeStr.includes('water') || MODIFIER_TYPES.includes(itemTypeStr));
 
-		// If we already filled this slot with a stronger item, skip!
-		if (isHeldWeapon && hasHeldWeapon) continue;
-		if (isPoison && hasPoison) continue;
-		if (isFire && hasFire) continue;
-		if (isJet && hasJet) continue;
-		if (isKick && hasKick) continue;
-		if (isWater && hasWater) continue;
+		let slotName = null;
+		if (!item.isEmployee) {
+			if (isHeldWeapon) slotName = 'held';
+			else if (isPoison) slotName = 'poison';
+			else if (isFire) slotName = 'fire';
+			else if (isJet) slotName = 'jet';
+			else if (isKick) slotName = 'kick';
+			else if (isWater) slotName = 'water';
+		}
+
+		if (slotName) {
+			if (slotName === 'held' && hasHeldWeapon) continue;
+			if (slotName === 'poison' && hasPoison) continue;
+			if (slotName === 'fire' && hasFire) continue;
+			if (slotName === 'jet' && hasJet) continue;
+			if (slotName === 'kick' && hasKick) continue;
+			if (slotName === 'water' && hasWater) continue;
+		}
 
 		if (isHeldWeapon && !item.isOwned) {
 			const budgetAfterThis = remainingBudget - item.price;
-
-			// Find the strongest modifier we evaluate
 			const topModifier = candidates.find((c) => {
 				const t = c.itemType || '';
 				return (MODIFIER_TYPES.includes(t) || t.includes('water')) && !c.isOwned;
 			});
 
-			// If we haven't bought a modifier yet, and we can't afford it with this weapon
 			if (!hasWater && topModifier && topModifier.price > budgetAfterThis) {
 				let foundBetterCombo = false;
 
-				// Loop through ALL other affordable weapons to see if ANY allow the combo
 				for (const alt of candidates) {
 					const t = alt.itemType || '';
 					const isAltBase =
@@ -320,71 +444,74 @@ export function calculateBestUpgrades(gameState, items, employees, upgradeStrate
 					if (isAltBase && alt.refId !== item.refId && alt.price <= remainingBudget) {
 						const budgetAfterAlt = remainingBudget - alt.price;
 						if (topModifier.price <= budgetAfterAlt) {
-							// We can afford the combo with this alt weapon! Let's check the DPS.
 							const fullComboDps = getMemoizedItemDPS(
 								topModifier.refId,
 								false,
 								items,
-								employees,
+								allEmployees,
 								gameState,
 								alt.refId
 							);
 							if (fullComboDps > item.value) {
 								foundBetterCombo = true;
-								break; // We found a valid, stronger combo! Stop searching.
+								break;
 							}
 						}
 					}
 				}
 
-				// If a cheaper weapon + modifier combo yields more DPS, skip this expensive weapon!
-				if (foundBetterCombo) {
-					continue;
-				}
+				if (foundBetterCombo) continue;
 			}
 		}
-		// ========================================================
 
 		if (item.isOwned) {
-			optimalSelection.push({ ...item, qty: 1 });
-			remainingBudget -= item.price;
-			totalDPS += item.value;
+			const qtyToKeep = item.qty || 1;
+			optimalSelection.push({ ...item, qty: qtyToKeep });
 
-			// Mark slots as filled
-			if (isHeldWeapon) hasHeldWeapon = true;
-			if (isPoison) hasPoison = true;
-			if (isFire) hasFire = true;
-			if (isJet) hasJet = true;
-			if (isKick) hasKick = true;
-			if (isWater) hasWater = true;
+			remainingBudget -= item.price * BigInt(qtyToKeep);
+			totalDPS += item.value * qtyToKeep;
+
+			if (slotName === 'held') hasHeldWeapon = true;
+			if (slotName === 'poison') hasPoison = true;
+			if (slotName === 'fire') hasFire = true;
+			if (slotName === 'jet') hasJet = true;
+			if (slotName === 'kick') hasKick = true;
+			if (slotName === 'water') hasWater = true;
 		} else {
-			// Calculate quantity
-			const isStackable = !NON_STACKABLE_TYPES.includes(itemTypeStr) && !isHeldWeapon;
+			const isStackable =
+				(!NON_STACKABLE_TYPES.includes(itemTypeStr) && !isHeldWeapon) || item.isEmployee;
 
-			const maxAffordable = remainingBudget / item.price;
-			const qtyToBuy = isStackable ? Number(maxAffordable) : 1;
+			const priceNum = Number(item.price);
+			const budgetNum = Number(remainingBudget);
+			const maxAffordable = Math.floor(budgetNum / priceNum);
+
+			const qtyToBuy = isStackable ? maxAffordable : 1;
 
 			if (qtyToBuy > 0) {
+				// DYNAMIC POCKET CHANGE CHECK
+				// Prevents buying a few useless interns with the leftover change after buying miners
+				const projectedAddedDps = item.value * qtyToBuy;
+				if (projectedAddedDps < highestWeaponDPS * 0.05) {
+					continue;
+				}
+
 				optimalSelection.push({ ...item, qty: qtyToBuy });
 				const totalCost = item.price * BigInt(qtyToBuy);
 				remainingBudget -= totalCost;
 				totalDPS += item.value * qtyToBuy;
 
-				// Mark slots as filled
-				if (isHeldWeapon) hasHeldWeapon = true;
-				if (isPoison) hasPoison = true;
-				if (isFire) hasFire = true;
-				if (isJet) hasJet = true;
-				if (isKick) hasKick = true;
-				if (isWater) hasWater = true;
+				if (slotName === 'held') hasHeldWeapon = true;
+				if (slotName === 'poison') hasPoison = true;
+				if (slotName === 'fire') hasFire = true;
+				if (slotName === 'jet') hasJet = true;
+				if (slotName === 'kick') hasKick = true;
+				if (slotName === 'water') hasWater = true;
 			}
 		}
 	}
 
-	// 5. Structure the Actions (Buy / Sell / Keep)
+	// 6. Structure the Actions
 	const toBuy = optimalSelection.filter((i) => !i.isOwned);
-
-	// FIX: Multiply price by the calculated quantity for totalSpent
 	const totalSpent = toBuy.reduce((sum, i) => sum + i.price * BigInt(i.qty || 1), 0n);
 
 	const keptIds = new Set();
@@ -392,10 +519,8 @@ export function calculateBestUpgrades(gameState, items, employees, upgradeStrate
 
 	let tempInv = [...inventoryItems];
 	const toSell = tempInv.filter((t) => !keptIds.has(t.refId));
+	const totalEarned = toSell.reduce((sum, i) => sum + i.price * BigInt(i.qty || 1), 0n);
 
-	const totalEarned = toSell.reduce((sum, i) => sum + i.price, 0n); // toSell objects are always qty:1 from Step 1
-
-	// Update groupItems
 	const groupItems = (arr) => {
 		const map = new Map();
 		arr.forEach((i) => {
@@ -416,21 +541,13 @@ export function calculateBestUpgrades(gameState, items, employees, upgradeStrate
 		return Array.from(map.values());
 	};
 
-	const topResults = [
+	return [
 		{
 			id: 1,
 			projectedValue: totalDPS,
-			buy: {
-				items: groupItems(toBuy),
-				totalSpent: totalSpent // Use the fixed sum
-			},
-			sell: {
-				items: groupItems(toSell),
-				totalEarned: totalEarned
-			},
+			buy: { items: groupItems(toBuy), totalSpent: totalSpent },
+			sell: { items: groupItems(toSell), totalEarned: totalEarned },
 			quests: []
 		}
 	];
-
-	return topResults;
 }
