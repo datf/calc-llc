@@ -129,7 +129,7 @@
 						</div>
 					</div>
 
-					{#if !compact}
+					{#if option.buy.items.length > 0}
 						<button
 							class="mt-6 w-full py-2 bg-black/40 hover:bg-black/60 border theme-border theme-text-muted hover:theme-text font-bold text-sm rounded transition-colors"
 							onclick={() =>

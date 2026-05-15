@@ -323,12 +323,18 @@ class CalculatorManager {
 	 * @param {string} loadoutName - Name for the new loadout tab
 	 */
 	applySuggestionAsLoadout(buyItems = [], sellItems = [], loadoutName = 'Suggested Upgrade') {
-		console.log(buyItems, sellItems, loadoutName);
 		const safeBuyItems = Array.isArray(buyItems) ? buyItems : [];
 		const safeSellItems = Array.isArray(sellItems) ? sellItems : [];
 
-		this.calculatorLoadoutCounter++;
-		const newId = this.calculatorLoadoutCounter;
+		const existingLoadoutIndex = this.calculatorLoadouts.findIndex((l) => l.name === loadoutName);
+
+		let newId;
+		if (existingLoadoutIndex !== -1) {
+			newId = this.calculatorLoadouts[existingLoadoutIndex].id;
+		} else {
+			this.calculatorLoadoutCounter++;
+			newId = this.calculatorLoadoutCounter;
+		}
 
 		/** @type {Loadout} */
 		const newLoadout = {
@@ -450,8 +456,15 @@ class CalculatorManager {
 			newLoadout.heldWeapon = bestHeldWeapon;
 		}
 
-		// 5. Save the new loadout and make it active
-		this.calculatorLoadouts = [...this.calculatorLoadouts, newLoadout];
+		// 5. Replace existing or append new loadout
+		if (existingLoadoutIndex !== -1) {
+			const newLoadouts = [...this.calculatorLoadouts];
+			newLoadouts[existingLoadoutIndex] = newLoadout;
+			this.calculatorLoadouts = newLoadouts;
+		} else {
+			this.calculatorLoadouts = [...this.calculatorLoadouts, newLoadout];
+		}
+
 		this.calculatorActiveLoadoutId = newId;
 	}
 }
