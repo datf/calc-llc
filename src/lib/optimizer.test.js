@@ -179,6 +179,44 @@ describe('Optimizer Integration (Real Items)', () => {
 		expect(soldItemNames).toContain('Silver Shotgun');
 		expect(soldItemNames).toContain('Senior Collector');
 	});
+	//it('should suggest buying more strong elementalists', () => {
+	//	const silverShotgun = items.get('shotgun_06_silver');
+	//	const realGameState = {
+	//		cash: 179452848628n,
+	//		inventory: {
+	//			poisongun_spinel: 1
+	//		},
+	//		hiredEmployees: {
+	//			STRONG_BUFFER: 200000n
+	//		},
+	//		passives: {
+	//			employee_miner_damage: 1160,
+	//			employee_miner_speed: 610,
+	//			employee_collector_speed: 610,
+	//			employee_collector_capacity: 464,
+	//			poison_damage: 2540,
+	//			player_sprint_speed: 385,
+	//			player_jump_velocity: 40,
+	//		},
+	//		professionId: 'ASSASSIN',
+	//		secondsPerRound: 300
+	//	};
+	//	const employeesForProfession = getOrgChart(realGameState.professionId);
+	//	const employeeMap = new Map(employeesForProfession.map((e) => [e.employee_id, e]));
+	//	const itemsForProfession = getItemsForProfession(realGameState.professionId);
+	//	const itemsMap = new Map(itemsForProfession.map((e) => [e.itemID, e]));
+
+	//	const results = calculateBestUpgrades(realGameState, itemsMap, employeeMap, 'MAX_DPS');
+
+	//	console.debug(JSON.stringify(results));
+
+	//	const option1 = results.find((opt) => opt.id === 1);
+	//	if (!option1) throw new Error('Option 1 was not found in results');
+
+	//	const buyEmployees = option1.buy.items.find((i) => i.name === 'Strong Buffer');
+
+	//	expect(buyEmployees).toBeDefined();
+	//});
 });
 
 describe('Optimizer prerequisites', () => {

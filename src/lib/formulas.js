@@ -36,7 +36,7 @@ export const DPS_FORMULAS = {
 
 	water_gun: '0',
 
-	employee_miner: '(weapon_strength * (1 + p_employee_miner_damage))',
+	employee_miner: '(weapon_strength * (1 + p_employee_miner_damage)) * max(1, buff_damage)',
 	employee_miner_aoe: '(weapon_strength * aoe_damage * (1 + p_employee_miner_damage))',
 
 	default: '0'
