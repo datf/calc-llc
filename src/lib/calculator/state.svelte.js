@@ -205,6 +205,141 @@ class CalculatorManager {
 		return map;
 	});
 
+	/**
+	 * Helper to calculate the maximum targets this loadout can hit per second
+	 */
+	getMaxTargetsPerSecond = $derived.by(() => {
+		const loadout = this.calculatorLoadouts.find((l) => l.id === this.calculatorActiveLoadoutId);
+		if (!loadout) return 1;
+
+		let maxTargets = 0;
+
+		// 1. Held Weapon Targets
+		if (loadout.heldWeapon) {
+			maxTargets += Number(loadout.heldWeapon.data.targets || loadout.heldWeapon.data.aoe || 1);
+		} else {
+			maxTargets += 1;
+		}
+
+		// 2. Add targets from Employee Miners
+		for (const emp of loadout.independents) {
+			if (emp.type === 'employee') {
+				maxTargets += emp.activeCount || 1;
+			}
+		}
+
+		// 3. Modifiers (like bombs/explosives)
+		for (const mod of loadout.modifiers) {
+			if (mod.data.targets) {
+				maxTargets += Number(mod.data.targets) * (mod.activeCount || 1);
+			}
+		}
+
+		return Math.max(1, maxTargets);
+	});
+
+	/**
+	 * Calculates the best tile to mine to fulfill a specific quota
+	 * Returns the tile and the theoretical time it will take.
+	 */
+	bestTileForQuota = $derived.by(() => {
+		const targetResource = 'coal';
+		const targetAmount = Number(gameState.quota || 0n);
+
+		if (!targetResource || targetAmount <= 0) return null;
+
+		const currentLoadoutId = this.calculatorActiveLoadoutId;
+		const dps = this.loadoutDPSMap.get(currentLoadoutId) || 0;
+		if (dps <= 0) return null;
+
+		const roundDuration = Number(gameState.secondsPerRound || 300);
+		const maxTargetsPerSecond = this.getMaxTargetsPerSecond;
+
+		// Find all tiles that drop the target resource
+		const validTiles = tiles.filter((t) => t.resource === targetResource);
+		if (validTiles.length === 0) return null;
+
+		let bestOption = null;
+		let fastestTime = Infinity;
+
+		for (const tile of validTiles) {
+			const hp = Number(tile.health || 1);
+			const minDrop = Number(tile.min_drop || 1);
+			const maxDrop = Number(tile.max_drop || 1);
+			const avgDrop = (minDrop + maxDrop) / 2;
+
+			const blocksNeeded = Math.ceil(targetAmount / avgDrop);
+
+			// AOE CAP: Time per block cannot be faster than 1 / maxTargets
+			const absoluteMinimumTimePerBlock = 1 / maxTargetsPerSecond;
+			const rawDamageTime = hp / dps;
+			const secondsPerBlock = Math.max(rawDamageTime, absoluteMinimumTimePerBlock);
+
+			const totalTime = blocksNeeded * secondsPerBlock;
+
+			console.log(tile, totalTime);
+
+			if (totalTime < fastestTime) {
+				fastestTime = totalTime;
+				bestOption = {
+					tile,
+					totalTime,
+					blocksNeeded,
+					avgDrop,
+					isPossibleThisRound: totalTime <= roundDuration
+				};
+			}
+		}
+
+		return bestOption;
+	});
+
+	/**
+	 * Calculates the most profitable tile to mine (Cash per second)
+	 */
+	mostProfitableTile = $derived.by(() => {
+		const currentLoadoutId = this.calculatorActiveLoadoutId;
+		const dps = this.loadoutDPSMap.get(currentLoadoutId) || 0;
+		if (dps <= 0) return null;
+
+		const roundDuration = Number(gameState.secondsPerRound || 300);
+		const maxTargetsPerSecond = this.getMaxTargetsPerSecond;
+
+		let bestOption = null;
+		let highestProfitPerSec = -1;
+
+		for (const tile of tiles) {
+			const hp = Number(tile.health || 1);
+			const minDrop = Number(tile.min_drop || 1);
+			const maxDrop = Number(tile.max_drop || 1);
+			const avgDrop = (minDrop + maxDrop) / 2;
+
+			const sellPrice = Number(tile.itemSellPrice || 0);
+
+			const absoluteMinimumTimePerBlock = 1 / maxTargetsPerSecond;
+			const rawDamageTime = hp / dps;
+			const secondsPerBlock = Math.max(rawDamageTime, absoluteMinimumTimePerBlock);
+
+			if (secondsPerBlock > roundDuration) continue;
+
+			const expectedCashPerBlock = avgDrop * sellPrice;
+
+			const profitPerSec = expectedCashPerBlock / secondsPerBlock;
+			console.log('profit', tile.tile_id, `${hp}/${dps}=${secondsPerBlock}`, profitPerSec);
+
+			if (profitPerSec > highestProfitPerSec) {
+				highestProfitPerSec = profitPerSec;
+				bestOption = {
+					tile,
+					profitPerSec,
+					expectedCashPerBlock
+				};
+			}
+		}
+
+		return bestOption;
+	});
+
 	toggleLayerFilter(layer) {
 		if (this.calculatorHiddenLayers.includes(layer)) {
 			this.calculatorHiddenLayers = this.calculatorHiddenLayers.filter((l) => l !== layer);

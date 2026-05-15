@@ -1,6 +1,7 @@
 <script>
 	import OptimizerWidget from '$lib/components/OptimizerWidget.svelte';
 	import ResourcePriceWidget from '$lib/components/ResourcePriceWidget.svelte';
+	import DashboardCalculatorWidget from '$lib/components/DashboardCalculatorWidget.svelte';
 </script>
 
 <div class="page-wrapper page-wide">
@@ -18,11 +19,13 @@
 				>
 			</div>
 
-			<div class="flex-grow">
+			<div class="flex-grow mb-4">
 				<OptimizerWidget compact={true} maxResults={1} />
 			</div>
+			<div class="flex-grow">
+				<DashboardCalculatorWidget />
+			</div>
 		</div>
-
 		<div class="lg:col-span-1 flex flex-col max-h-[600px]">
 			<ResourcePriceWidget />
 		</div>
