@@ -9,7 +9,7 @@ import {
 	formatEmployeeName
 } from '$lib/optimizer.js';
 
-export const LAYER_PROGRESSION = ['dirt', 'clay', 'stone', 'ice', 'fire', 'dark'];
+const LAYER_PROGRESSION = ['dirt', 'clay', 'stone', 'ice', 'fire', 'dark'];
 
 /**
  * @typedef {Object} LoadoutSource
@@ -34,7 +34,24 @@ export const LAYER_PROGRESSION = ['dirt', 'clay', 'stone', 'ice', 'fire', 'dark'
  * @property {LoadoutSource[]} modifiers
  */
 
-export class CalculatorManager {
+class CalculatorManager {
+	/** @type {Loadout[]} */
+	calculatorLoadouts = $state([
+		{
+			id: 1,
+			name: 'Default Loadout',
+			heldWeapon: null,
+			independents: [],
+			modifiers: []
+		}
+	]);
+
+	calculatorActiveLoadoutId = $state(1);
+	calculatorLoadoutCounter = $state(1);
+
+	calculatorHiddenLayers = $state([]);
+	calculatorHiddenMaterials = $state([]);
+
 	sources = $derived.by(() => {
 		/** @type {LoadoutSource[]} */
 		let heldWeapons = [];
@@ -44,7 +61,9 @@ export class CalculatorManager {
 		let modifiers = [];
 
 		for (const [itemId, count] of Object.entries(gameState.inventory)) {
-			if (count > 0) {
+			// Ensure bigints/strings from Svelte proxies are properly cleaned
+			const safeCount = Number(String(count).replace('n', ''));
+			if (safeCount > 0) {
 				const itemObj = items.get(itemId);
 				if (itemObj && itemObj.itemType && !IGNORED_TYPES.includes(itemObj.itemType)) {
 					const isStackable = !NON_STACKABLE_TYPES.includes(itemObj.itemType);
@@ -56,10 +75,10 @@ export class CalculatorManager {
 						type: 'equipment',
 						data: itemObj,
 						pics: [itemObj.picB64 || ''], // Ensure array contains strings
-						activeCount: 1, // Add this
-						ownedCount: Number(count),
+						activeCount: 1,
+						ownedCount: safeCount,
 						isStackable: isStackable,
-						maxCount: isStackable ? Number(count) : 1
+						maxCount: isStackable ? safeCount : 1
 					};
 
 					if (MODIFIER_TYPES.includes(itemObj.itemType) || itemObj.itemType.includes('water')) {
@@ -74,7 +93,8 @@ export class CalculatorManager {
 		}
 
 		for (const [empId, count] of Object.entries(gameState.hiredEmployees)) {
-			if (count > 0n) {
+			const safeCount = Number(String(count).replace('n', ''));
+			if (safeCount > 0) {
 				const empObj = employees.get(empId);
 				if (empObj && empObj.type === '0') {
 					let compositePics = [];
@@ -97,10 +117,10 @@ export class CalculatorManager {
 						data: { ...empObj, weapon_strength: weaponStrength },
 						pics: compositePics,
 						category: 'independent',
-						activeCount: 1, // Add this
-						ownedCount: Number(count),
+						activeCount: 1,
+						ownedCount: safeCount,
 						isStackable: true,
-						maxCount: Number(count)
+						maxCount: safeCount
 					});
 				}
 			}
@@ -140,22 +160,17 @@ export class CalculatorManager {
 			if (t.probability !== undefined && Number(t.probability) === 0) return false;
 			const layerIndex = LAYER_PROGRESSION.indexOf(t.layer);
 			if (layerIndex > 0 && layerIndex <= shiftAmount) return false;
-			if (gameState.calculatorHiddenLayers.includes(t.layer)) return false;
-			if (gameState.calculatorHiddenMaterials.includes(t.resource)) return false;
+			if (this.calculatorHiddenLayers.includes(t.layer)) return false;
+			if (this.calculatorHiddenMaterials.includes(t.resource)) return false;
 			return true;
 		});
 	});
 
-	/** @returns {Loadout[]} */
-	get typedLoadouts() {
-		return gameState.calculatorLoadouts;
-	}
-
 	/** @type {Loadout} */
 	activeLoadout = $derived.by(() => {
 		return (
-			this.typedLoadouts.find((l) => l.id === gameState.calculatorActiveLoadoutId) ||
-			this.typedLoadouts[0]
+			this.calculatorLoadouts.find((l) => l.id === this.calculatorActiveLoadoutId) ||
+			this.calculatorLoadouts[0]
 		);
 	});
 
@@ -181,7 +196,8 @@ export class CalculatorManager {
 
 	loadoutDPSMap = $derived.by(() => {
 		const map = new Map();
-		for (const loadout of this.typedLoadouts) {
+		for (const loadout of this.calculatorLoadouts) {
+			// Only pass loadout, gameState variables will dynamically react inside calculateLoadoutDPS
 			const dps = calculateLoadoutDPS(loadout, gameState);
 			map.set(loadout.id, dps);
 		}
@@ -189,22 +205,18 @@ export class CalculatorManager {
 	});
 
 	toggleLayerFilter(layer) {
-		if (gameState.calculatorHiddenLayers.includes(layer)) {
-			gameState.calculatorHiddenLayers = gameState.calculatorHiddenLayers.filter(
-				(l) => l !== layer
-			);
+		if (this.calculatorHiddenLayers.includes(layer)) {
+			this.calculatorHiddenLayers = this.calculatorHiddenLayers.filter((l) => l !== layer);
 		} else {
-			gameState.calculatorHiddenLayers = [...gameState.calculatorHiddenLayers, layer];
+			this.calculatorHiddenLayers = [...this.calculatorHiddenLayers, layer];
 		}
 	}
 
 	toggleMaterialFilter(mat) {
-		if (gameState.calculatorHiddenMaterials.includes(mat)) {
-			gameState.calculatorHiddenMaterials = gameState.calculatorHiddenMaterials.filter(
-				(m) => m !== mat
-			);
+		if (this.calculatorHiddenMaterials.includes(mat)) {
+			this.calculatorHiddenMaterials = this.calculatorHiddenMaterials.filter((m) => m !== mat);
 		} else {
-			gameState.calculatorHiddenMaterials = [...gameState.calculatorHiddenMaterials, mat];
+			this.calculatorHiddenMaterials = [...this.calculatorHiddenMaterials, mat];
 		}
 	}
 
@@ -220,8 +232,8 @@ export class CalculatorManager {
 	}
 
 	addLoadout() {
-		gameState.calculatorLoadoutCounter++;
-		const newId = gameState.calculatorLoadoutCounter;
+		this.calculatorLoadoutCounter++;
+		const newId = this.calculatorLoadoutCounter;
 
 		/** @type {Loadout} */
 		const newLoadout = {
@@ -232,19 +244,17 @@ export class CalculatorManager {
 			modifiers: []
 		};
 
-		/** @type {any} */
-		(gameState.calculatorLoadouts).push(newLoadout);
-		gameState.calculatorActiveLoadoutId = newId;
+		this.calculatorLoadouts = [...this.calculatorLoadouts, newLoadout];
+		this.calculatorActiveLoadoutId = newId;
 	}
 
 	removeLoadout(id) {
-		if (this.typedLoadouts.length === 1) return;
+		if (this.calculatorLoadouts.length === 1) return;
 
-		/** @type {any} */
-		(gameState).calculatorLoadouts = this.typedLoadouts.filter((l) => l.id !== id);
+		this.calculatorLoadouts = this.calculatorLoadouts.filter((l) => l.id !== id);
 
-		if (gameState.calculatorActiveLoadoutId === id) {
-			gameState.calculatorActiveLoadoutId = this.typedLoadouts[0].id;
+		if (this.calculatorActiveLoadoutId === id) {
+			this.calculatorActiveLoadoutId = this.calculatorLoadouts[0].id;
 		}
 	}
 
@@ -252,32 +262,44 @@ export class CalculatorManager {
 	 * @param {LoadoutSource} source
 	 */
 	toggleItemInLoadout(source) {
-		const loadout = this.typedLoadouts.find((l) => l.id === gameState.calculatorActiveLoadoutId);
-		if (!loadout) return;
+		const loadoutIdx = this.calculatorLoadouts.findIndex(
+			(l) => l.id === this.calculatorActiveLoadoutId
+		);
+		if (loadoutIdx === -1) return;
+
+		// Deep clone loadouts to ensure Svelte 5 fully triggers the $state proxy update
+		let newLoadouts = [...this.calculatorLoadouts];
+		let targetLoadout = { ...newLoadouts[loadoutIdx] };
+		targetLoadout.independents = [...targetLoadout.independents];
+		targetLoadout.modifiers = [...targetLoadout.modifiers];
 
 		const sourceClone = { ...source };
 
 		if (source.category === 'held') {
-			if (loadout.heldWeapon?.id === source.id) loadout.heldWeapon = null;
-			else {
+			if (targetLoadout.heldWeapon?.id === source.id) {
+				targetLoadout.heldWeapon = null;
+			} else {
 				sourceClone.activeCount = 1;
-				loadout.heldWeapon = sourceClone;
+				targetLoadout.heldWeapon = sourceClone;
 			}
 		} else if (source.category === 'modifier') {
-			const idx = loadout.modifiers.findIndex((s) => s.id === source.id);
-			if (idx >= 0) loadout.modifiers.splice(idx, 1);
+			const idx = targetLoadout.modifiers.findIndex((s) => s.id === source.id);
+			if (idx >= 0) targetLoadout.modifiers.splice(idx, 1);
 			else {
 				sourceClone.activeCount = source.maxCount;
-				loadout.modifiers.push(sourceClone);
+				targetLoadout.modifiers.push(sourceClone);
 			}
 		} else if (source.category === 'independent') {
-			const idx = loadout.independents.findIndex((s) => s.id === source.id);
-			if (idx >= 0) loadout.independents.splice(idx, 1);
+			const idx = targetLoadout.independents.findIndex((s) => s.id === source.id);
+			if (idx >= 0) targetLoadout.independents.splice(idx, 1);
 			else {
 				sourceClone.activeCount = source.maxCount;
-				loadout.independents.push(sourceClone);
+				targetLoadout.independents.push(sourceClone);
 			}
 		}
+
+		newLoadouts[loadoutIdx] = targetLoadout;
+		this.calculatorLoadouts = newLoadouts;
 	}
 
 	/**
@@ -293,3 +315,5 @@ export class CalculatorManager {
 		return false;
 	}
 }
+
+export const calcState = new CalculatorManager();

@@ -265,13 +265,6 @@ class GameState {
 		}
 	}
 
-	calculatorLoadouts = $state([
-		/** @type {import('./calculator/state.svelte.js').Loadout[]} */
-		{ id: 1, name: 'Loadout 1', heldWeapon: null, independents: [], modifiers: [] }
-	]);
-	calculatorActiveLoadoutId = $state(1);
-	calculatorLoadoutCounter = $state(1);
-
 	actionBus = new EventTarget();
 	triggerAction(eventName, detail) {
 		const e = new CustomEvent(eventName, {

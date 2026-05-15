@@ -2,9 +2,7 @@
 	import { gameState } from '$lib/game.svelte.js';
 	import { formatLargeNumber } from '$lib/utils.js';
 	import { formatDPS, getTimeToDestroyInfo } from '$lib/utils.js';
-	import { CalculatorManager } from '$lib/calculator/state.svelte.js';
-
-	const calc = new CalculatorManager();
+	import { calcState } from '$lib/calculator/state.svelte.js';
 </script>
 
 <div class="mb-8 theme-surface border theme-border rounded-xl overflow-hidden">
@@ -12,31 +10,31 @@
 		<span class="theme-text-muted font-bold uppercase tracking-wider text-sm mr-2 shrink-0"
 			>Loadouts:</span
 		>
-		{#each calc.typedLoadouts as loadout}
+		{#each calcState.calculatorLoadouts as loadout}
 			<div
-				class="flex items-center theme-surface theme-surface-hover rounded-lg border {gameState.calculatorActiveLoadoutId ===
+				class="flex items-center theme-surface theme-surface-hover rounded-lg border {calcState.calculatorActiveLoadoutId ===
 				loadout.id
 					? 'theme-border-hover shadow-[0_0_8px_rgba(255,215,0,0.2)]'
 					: 'theme-border opacity-70'}"
 			>
 				<button
-					class="px-4 py-2 font-bold text-sm {gameState.calculatorActiveLoadoutId === loadout.id
+					class="px-4 py-2 font-bold text-sm {calcState.calculatorActiveLoadoutId === loadout.id
 						? 'theme-text-accent'
 						: 'theme-text'}"
-					onclick={() => (gameState.calculatorActiveLoadoutId = loadout.id)}
+					onclick={() => (calcState.calculatorActiveLoadoutId = loadout.id)}
 				>
 					{loadout.name}
 				</button>
-				{#if calc.typedLoadouts.length > 1}
+				{#if calcState.calculatorLoadouts.length > 1}
 					<button
 						class="px-2 py-2 theme-text-muted hover:text-red-400"
-						onclick={() => calc.removeLoadout(loadout.id)}>✕</button
+						onclick={() => calcState.removeLoadout(loadout.id)}>✕</button
 					>
 				{/if}
 			</div>
 		{/each}
 		<button
-			onclick={() => calc.addLoadout()}
+			onclick={() => calcState.addLoadout()}
 			class="px-4 py-2 theme-surface theme-surface-hover border theme-border theme-text-muted hover:theme-text rounded-lg font-bold shrink-0"
 		>
 			+ Add Loadout
@@ -46,7 +44,7 @@
 	<div class="p-6">
 		<p class="text-sm theme-text-muted mb-4">
 			Click items to toggle them for <strong class="theme-text-accent"
-				>{calc.activeLoadout.name}</strong
+				>{calcState.activeLoadout.name}</strong
 			>. Adjust quantities using the inputs.
 		</p>
 
@@ -57,13 +55,13 @@
 					Status Modifiers
 				</h3>
 				<div class="flex flex-wrap gap-2">
-					{#each calc.sources.modifiers as source}
+					{#each calcState.sources.modifiers as source}
 						<div
 							role="button"
 							tabindex="0"
-							onclick={() => calc.toggleItemInLoadout(source)}
-							onkeydown={(e) => e.key === 'Enter' && calc.toggleItemInLoadout(source)}
-							class="flex items-center gap-2 px-2 py-1.5 rounded border cursor-pointer select-none {calc.isSourceActive(
+							onclick={() => calcState.toggleItemInLoadout(source)}
+							onkeydown={(e) => e.key === 'Enter' && calcState.toggleItemInLoadout(source)}
+							class="flex items-center gap-2 px-2 py-1.5 rounded border cursor-pointer select-none {calcState.isSourceActive(
 								source
 							)
 								? 'bg-blue-900/40 border-blue-400'
@@ -82,12 +80,15 @@
 							{/if}
 							<div class="flex flex-col text-left">
 								<span
-									class="text-xs font-bold {calc.isSourceActive(source)
+									class="text-xs font-bold {calcState.isSourceActive(source)
 										? 'theme-text'
 										: 'theme-text-muted'}">{source.name}</span
 								>
-								{#if calc.isSourceActive(source)}
-									{@const activeRef = calc.getActiveRef(calc.activeLoadout.modifiers, source.id)}
+								{#if calcState.isSourceActive(source)}
+									{@const activeRef = calcState.getActiveRef(
+										calcState.activeLoadout.modifiers,
+										source.id
+									)}
 									{#if source.isStackable}
 										<div
 											class="mt-0.5 flex items-center gap-1"
@@ -128,13 +129,13 @@
 					Background DPS
 				</h3>
 				<div class="flex flex-wrap gap-2">
-					{#each calc.sources.independentSources as source}
+					{#each calcState.sources.independentSources as source}
 						<div
 							role="button"
 							tabindex="0"
-							onclick={() => calc.toggleItemInLoadout(source)}
-							onkeydown={(e) => e.key === 'Enter' && calc.toggleItemInLoadout(source)}
-							class="flex items-center gap-2 px-2 py-1.5 rounded border cursor-pointer select-none {calc.isSourceActive(
+							onclick={() => calcState.toggleItemInLoadout(source)}
+							onkeydown={(e) => e.key === 'Enter' && calcState.toggleItemInLoadout(source)}
+							class="flex items-center gap-2 px-2 py-1.5 rounded border cursor-pointer select-none {calcState.isSourceActive(
 								source
 							)
 								? 'bg-green-900/40 border-green-400'
@@ -153,12 +154,15 @@
 							{/if}
 							<div class="flex flex-col text-left">
 								<span
-									class="text-xs font-bold {calc.isSourceActive(source)
+									class="text-xs font-bold {calcState.isSourceActive(source)
 										? 'theme-text'
 										: 'theme-text-muted'}">{source.name}</span
 								>
-								{#if calc.isSourceActive(source)}
-									{@const activeRef = calc.getActiveRef(calc.activeLoadout.independents, source.id)}
+								{#if calcState.isSourceActive(source)}
+									{@const activeRef = calcState.getActiveRef(
+										calcState.activeLoadout.independents,
+										source.id
+									)}
 									{#if source.isStackable}
 										<div
 											class="mt-0.5 flex items-center gap-1"
@@ -200,13 +204,13 @@
 					Held Weapon (Max 1)
 				</h3>
 				<div class="flex flex-wrap gap-2">
-					{#each calc.sources.heldWeapons as source}
+					{#each calcState.sources.heldWeapons as source}
 						<div
 							role="button"
 							tabindex="0"
-							onclick={() => calc.toggleItemInLoadout(source)}
-							onkeydown={(e) => e.key === 'Enter' && calc.toggleItemInLoadout(source)}
-							class="flex items-center gap-2 px-2 py-1.5 rounded border cursor-pointer select-none {calc.isSourceActive(
+							onclick={() => calcState.toggleItemInLoadout(source)}
+							onkeydown={(e) => e.key === 'Enter' && calcState.toggleItemInLoadout(source)}
+							class="flex items-center gap-2 px-2 py-1.5 rounded border cursor-pointer select-none {calcState.isSourceActive(
 								source
 							)
 								? 'bg-yellow-900/30 theme-border-hover shadow-[0_0_8px_rgba(255,215,0,0.3)]'
@@ -225,7 +229,7 @@
 							{/if}
 							<div class="flex flex-col text-left">
 								<span
-									class="text-xs font-bold {calc.isSourceActive(source)
+									class="text-xs font-bold {calcState.isSourceActive(source)
 										? 'theme-text'
 										: 'theme-text-muted'}">{source.name}</span
 								>
@@ -246,8 +250,8 @@
 					Active Passives Summary
 				</h3>
 				<div class="flex flex-wrap gap-2">
-					{#each calc.nonZeroPassives as passive}
-						{@const isActive = calc.activePassiveKeys.has(passive.key)}
+					{#each calcState.nonZeroPassives as passive}
+						{@const isActive = calcState.activePassiveKeys.has(passive.key)}
 						<div
 							class="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono border {isActive
 								? 'bg-purple-900/40 border-purple-400 theme-text shadow-[0_0_8px_rgba(168,85,247,0.2)]'
@@ -259,7 +263,7 @@
 							>
 						</div>
 					{/each}
-					{#if calc.nonZeroPassives.length === 0}
+					{#if calcState.nonZeroPassives.length === 0}
 						<span class="text-xs theme-text-muted italic">No passives upgraded yet.</span>
 					{/if}
 				</div>
@@ -275,10 +279,10 @@
 			Filter by Layer
 		</h3>
 		<div class="flex flex-wrap gap-2">
-			{#each calc.layerOptions as layer}
+			{#each calcState.layerOptions as layer}
 				<button
-					onclick={() => calc.toggleLayerFilter(layer.name)}
-					class="flex items-center gap-1.5 px-2 py-1 rounded border text-xs font-bold select-none {gameState.calculatorHiddenLayers.includes(
+					onclick={() => calcState.toggleLayerFilter(layer.name)}
+					class="flex items-center gap-1.5 px-2 py-1 rounded border text-xs font-bold select-none {calcState.calculatorHiddenLayers.includes(
 						layer.name
 					)
 						? 'var(--bg-main) theme-border theme-text-muted opacity-50'
@@ -299,10 +303,10 @@
 			Filter by Material
 		</h3>
 		<div class="flex flex-wrap gap-2">
-			{#each calc.materialOptions as mat}
+			{#each calcState.materialOptions as mat}
 				<button
-					onclick={() => calc.toggleMaterialFilter(mat.name)}
-					class="flex items-center gap-1.5 px-2 py-1 rounded border text-xs font-bold select-none {gameState.calculatorHiddenMaterials.includes(
+					onclick={() => calcState.toggleMaterialFilter(mat.name)}
+					class="flex items-center gap-1.5 px-2 py-1 rounded border text-xs font-bold select-none {calcState.calculatorHiddenMaterials.includes(
 						mat.name
 					)
 						? 'var(--bg-main) theme-border theme-text-muted opacity-50'
@@ -329,7 +333,7 @@
 					class="p-4 border-b border-r theme-border min-w-[280px] sticky left-0 theme-surface z-20 shadow-[2px_0_5px_rgba(0,0,0,0.3)]"
 					>Loadout</th
 				>
-				{#each calc.filteredTiles as tile}
+				{#each calcState.filteredTiles as tile}
 					<th class="p-4 border-b theme-border min-w-[120px]">
 						<div class="flex items-center gap-2">
 							{#if tile.pics_in_rock_base64?.length > 0}
@@ -348,7 +352,7 @@
 						</div>
 					</th>
 				{/each}
-				{#if calc.filteredTiles.length === 0}
+				{#if calcState.filteredTiles.length === 0}
 					<th class="p-4 border-b theme-border theme-text-muted italic font-normal"
 						>No tiles match current filters.</th
 					>
@@ -356,10 +360,10 @@
 			</tr>
 		</thead>
 		<tbody class="text-sm divide-y divide-gray-700">
-			{#each calc.typedLoadouts as loadout}
-				{@const rowDPS = calc.loadoutDPSMap.get(loadout.id) || 0}
+			{#each calcState.calculatorLoadouts as loadout}
+				{@const rowDPS = calcState.loadoutDPSMap.get(loadout.id) || 0}
 				{@const maxTime = gameState.secondsPerRound || 300}
-				{@const isEditing = gameState.calculatorActiveLoadoutId === loadout.id}
+				{@const isEditing = calcState.calculatorActiveLoadoutId === loadout.id}
 
 				<tr
 					class="hover:var(--border-main)/50 {isEditing
@@ -374,7 +378,7 @@
 								class="font-bold flex items-center gap-2 focus:outline-none {isEditing
 									? 'theme-text-accent'
 									: 'theme-text hover:theme-text'}"
-								onclick={() => (gameState.calculatorActiveLoadoutId = loadout.id)}
+								onclick={() => (calcState.calculatorActiveLoadoutId = loadout.id)}
 							>
 								{loadout.name}
 							</button>
@@ -434,7 +438,7 @@
 						</div>
 					</td>
 
-					{#each calc.filteredTiles as tile}
+					{#each calcState.filteredTiles as tile}
 						{@const ttk = getTimeToDestroyInfo(tile, rowDPS, maxTime)}
 						<td class="p-4 align-middle border-r theme-border last:border-r-0 text-center">
 							<div class="relative group cursor-help inline-block w-full">
