@@ -23,6 +23,7 @@ const LAYER_PROGRESSION = ['dirt', 'clay', 'stone', 'ice', 'fire', 'dark'];
  * @property {number} maxCount
  * @property {number} ownedCount
  * @property {string} [category]
+ * @property {number} [projectedQty]
  */
 
 /**
@@ -313,6 +314,145 @@ class CalculatorManager {
 		if (source.category === 'independent')
 			return this.activeLoadout.independents.some((s) => s.id === source.id);
 		return false;
+	}
+
+	/**
+	 * Creates a new loadout based on an Optimizer Suggestion
+	 * @param {Array} buyItems - The `buy.items` array from the optimizer result
+	 * @param {Array} sellItems - The `sell.items` array from the optimizer result
+	 * @param {string} loadoutName - Name for the new loadout tab
+	 */
+	applySuggestionAsLoadout(buyItems = [], sellItems = [], loadoutName = 'Suggested Upgrade') {
+		console.log(buyItems, sellItems, loadoutName);
+		const safeBuyItems = Array.isArray(buyItems) ? buyItems : [];
+		const safeSellItems = Array.isArray(sellItems) ? sellItems : [];
+
+		this.calculatorLoadoutCounter++;
+		const newId = this.calculatorLoadoutCounter;
+
+		/** @type {Loadout} */
+		const newLoadout = {
+			id: newId,
+			name: loadoutName,
+			heldWeapon: null,
+			independents: [],
+			modifiers: []
+		};
+
+		// 1. Gather CURRENT active sources as a baseline
+		const projectedSources = new Map();
+		const allCurrentSources = [
+			...this.sources.heldWeapons,
+			...this.sources.independentSources,
+			...this.sources.modifiers
+		];
+
+		for (const s of allCurrentSources) {
+			projectedSources.set(s.id, { ...s, projectedQty: s.ownedCount });
+		}
+
+		const findInDatabase = (searchName) => {
+			for (const [id, item] of items.entries()) {
+				if (item.itemName === searchName || id === searchName) {
+					return { id: `item_${id}`, data: item, isEmp: false };
+				}
+			}
+			for (const [id, emp] of employees.entries()) {
+				if (formatEmployeeName(emp.employee_id) === searchName) {
+					return { id: `emp_${id}`, data: emp, isEmp: true };
+				}
+			}
+			return null;
+		};
+
+		// 2. Subtract Sold Items using the safe array
+		for (const sell of safeSellItems) {
+			const existingKey = [...projectedSources.keys()].find(
+				(k) => projectedSources.get(k).name === sell.name
+			);
+			if (existingKey) {
+				projectedSources.get(existingKey).projectedQty -= sell.qty;
+			}
+		}
+
+		// 3. Add Bought Items using the safe array
+		for (const buy of safeBuyItems) {
+			const existingKey = [...projectedSources.keys()].find(
+				(k) => projectedSources.get(k).name === buy.name
+			);
+
+			if (existingKey) {
+				projectedSources.get(existingKey).projectedQty += buy.qty;
+			} else {
+				const dbMatch = findInDatabase(buy.name);
+				if (dbMatch) {
+					const isStackable =
+						dbMatch.isEmp || !NON_STACKABLE_TYPES.includes(dbMatch.data.itemType || '');
+
+					/** @type {LoadoutSource} */
+					const newSource = {
+						id: dbMatch.id,
+						name: buy.name,
+						type: dbMatch.isEmp ? 'employee' : 'equipment',
+						data: dbMatch.data,
+						pics: buy.pics || [],
+						activeCount: 1,
+						ownedCount: 0,
+						isStackable: isStackable,
+						maxCount: isStackable ? buy.qty : 1,
+						projectedQty: buy.qty
+					};
+
+					if (dbMatch.isEmp) {
+						let weaponStrength = 0;
+						if (dbMatch.data.equipment_itemID) {
+							const wObj = items.get(dbMatch.data.equipment_itemID);
+							if (wObj) weaponStrength = Number(wObj.Strength || wObj.damage || 0);
+						}
+						newSource.data = { ...dbMatch.data, weapon_strength: weaponStrength };
+						newSource.category = 'independent';
+					} else {
+						const t = dbMatch.data.itemType || '';
+						if (MODIFIER_TYPES.includes(t) || t.includes('water')) newSource.category = 'modifier';
+						else if (INDEPENDENT_TYPES.includes(t)) newSource.category = 'independent';
+						else newSource.category = 'held';
+					}
+
+					projectedSources.set(dbMatch.id, newSource);
+				}
+			}
+		}
+
+		// 4. Populate the Loadout
+		let bestHeldWeapon = null;
+		let highestHeldPrice = -1;
+
+		for (const source of projectedSources.values()) {
+			if (source.projectedQty <= 0) continue;
+
+			source.activeCount = source.isStackable ? source.projectedQty : 1;
+			source.maxCount = source.isStackable ? source.projectedQty : 1;
+
+			if (source.category === 'held') {
+				const price = Number(source.data.itemBuyPrice || source.data.itemSellPrice || 0);
+				if (price > highestHeldPrice) {
+					highestHeldPrice = price;
+					bestHeldWeapon = source;
+				}
+			} else if (source.category === 'modifier') {
+				newLoadout.modifiers.push(source);
+			} else if (source.category === 'independent') {
+				newLoadout.independents.push(source);
+			}
+		}
+
+		if (bestHeldWeapon) {
+			newLoadout.heldWeapon = bestHeldWeapon;
+		}
+
+		// 5. Save the new loadout and make it active
+		this.calculatorLoadouts = [...this.calculatorLoadouts, newLoadout];
+		this.calculatorActiveLoadoutId = newId;
 	}
 }
 

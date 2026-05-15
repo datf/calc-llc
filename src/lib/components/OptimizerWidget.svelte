@@ -1,5 +1,6 @@
 <script>
 	import { optimizer } from '$lib/optimizer/state.svelte.js';
+	import { calcState } from '$lib/calculator/state.svelte.js';
 	import { formatLargeNumber, formatDPS } from '$lib/utils.js';
 
 	let { compact = false, maxResults = 3 } = $props();
@@ -131,7 +132,12 @@
 					{#if !compact}
 						<button
 							class="mt-6 w-full py-2 bg-black/40 hover:bg-black/60 border theme-border theme-text-muted hover:theme-text font-bold text-sm rounded transition-colors"
-							onclick={() => alert('Logic to create a new loadout from these items will go here')}
+							onclick={() =>
+								calcState.applySuggestionAsLoadout(
+									optimizer.results[0]?.buy.items,
+									optimizer.results[0]?.sell.items,
+									'Optimized Build'
+								)}
 						>
 							+ Create New Loadout
 						</button>
