@@ -129,7 +129,9 @@ describe('Optimizer Integration (Real Items)', () => {
 			cash: 3000n,
 			inventory: {},
 			hiredEmployees: {},
-			passives: {},
+			passives: {
+				orb_radius: 1
+			},
 			professionId: 'ORBIST',
 			secondsPerRound: 100
 		};

@@ -25,7 +25,8 @@ export const DPS_FORMULAS = {
 	boxing_glove: 'damage * (1 + p_punch_damage) * (1 + p_punch_speed)',
 	roundhouse_kick: 'damage * (1 + p_kick_damage) * (1 + p_kick_speed)',
 
-	orb: 'damage * (1 + p_orb_damage)',
+	// Add area calculation with radius here to test
+	orb: 'damage * (1 + p_orb_damage) * ((pi * ((min(1500, 60 * (1 + p_orb_radius))) ^ 2)) / (64 * 64))',
 
 	staff: '((missile_count / cooldown_secs) * missile_damage) * (1 + p_magic_missiles_damage)',
 
