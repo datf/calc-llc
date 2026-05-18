@@ -1,6 +1,7 @@
 /** @typedef {import('./calculator/state.svelte.js').Loadout} Loadout */
 /** @typedef {import('./calculator/state.svelte.js').LoadoutSource} LoadoutSource */
 import { calculateLoadoutDPS, CONSUMABLE_TYPES } from './calculator.js';
+import { items as ALL_ITEMS } from './database.js';
 
 // --- CATEGORIZATION CONSTANTS ---
 export const IGNORED_TYPES = [
@@ -130,7 +131,10 @@ export function getMemoizedItemDPS(
 				id: `emp_${id}`,
 				name: formatEmployeeName(emp.employee_id),
 				type: 'employee',
-				data: { ...emp, weapon_strength: Number(items.get(emp.equipment_itemID)?.Strength || 0) },
+				data: {
+					...emp,
+					weapon_strength: Number(ALL_ITEMS.get(emp.equipment_itemID)?.Strength || 0)
+				},
 				pics: [], // Assuming mock evaluation doesn't need pics
 				activeCount: 1,
 				isStackable: true,
@@ -299,9 +303,10 @@ export function calculateBestUpgrades(gameState, items, baseEmployeesMap, upgrad
 			const isStackable =
 				c.isEmployee || (!NON_STACKABLE_TYPES.includes(itemTypeStr) && !isHeldWeapon);
 
-			// If we own it, we evaluate its bulk potential based on how many we actually own
+			const canAfford =
+				isStackable && priceAsNumber > 0 ? Math.floor(Number(maxCapacity) / priceAsNumber) : 0;
 			const maxAffordable = c.isOwned
-				? c.qty || 1
+				? c.qty + canAfford || 1
 				: isStackable && priceAsNumber > 0
 					? Math.floor(Number(maxCapacity) / priceAsNumber)
 					: 1;
