@@ -53,8 +53,6 @@ class GameState {
 	inventory = $state({});
 	passives = $state(Object.fromEntries(PASSIVE_KEYS.map((key) => [key, 0.0])));
 
-	// NEW: Tracks explicit shop availability overrides from the save file
-	// (e.g., setting to 'false' once a player buys a bonus item)
 	itemUnlockedStates = $state({});
 
 	// NEW: System tracker for bonus effects

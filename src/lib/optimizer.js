@@ -174,7 +174,13 @@ export function getMemoizedItemDPS(
 	return dps;
 }
 
-export function calculateBestUpgrades(gameState, items, baseEmployeesMap, upgradeStrategy) {
+export function calculateBestUpgrades(
+	gameState,
+	items,
+	baseEmployeesMap,
+	upgradeStrategy,
+	lockedItems = []
+) {
 	dpsCache.clear();
 
 	const allEmployees = flattenEmployeeTree(baseEmployeesMap);
@@ -186,20 +192,21 @@ export function calculateBestUpgrades(gameState, items, baseEmployeesMap, upgrad
 	// 1. Calculate Sellable Inventory (Equipment)
 	for (const [id, count] of Object.entries(gameState.inventory)) {
 		const safeCount = Number(String(count).replace('n', ''));
-
 		if (safeCount > 0) {
 			const item = items.get(id);
 			if (item && item.itemSellPrice) {
-				const sellPrice = BigInt(item.itemSellPrice);
-				totalSellValue += sellPrice * BigInt(safeCount);
+				const isLocked = lockedItems?.includes(id);
+				const sellPrice = isLocked ? 0n : BigInt(item.itemSellPrice);
 
+				totalSellValue += sellPrice * BigInt(safeCount);
 				inventoryItems.push({
 					...item,
 					refId: id,
 					price: sellPrice,
 					qty: safeCount,
 					isOwned: true,
-					isEmployee: false
+					isEmployee: false,
+					isLocked
 				});
 			}
 		}
@@ -208,15 +215,14 @@ export function calculateBestUpgrades(gameState, items, baseEmployeesMap, upgrad
 	// 1.5 Calculate Sellable Inventory (Employees)
 	for (const [id, count] of Object.entries(gameState.hiredEmployees)) {
 		const safeCount = Number(String(count).replace('n', ''));
-
 		if (safeCount > 0) {
 			const emp = allEmployees.get(id);
 			if (emp) {
+				const isLocked = lockedItems?.includes(id);
 				const costForSell = BigInt(emp.upgrade_cost || emp.price || 0);
-				const sellValue = costForSell / 2n;
+				const sellValue = isLocked ? 0n : costForSell / 2n;
 
 				totalSellValue += sellValue * BigInt(safeCount);
-
 				inventoryItems.push({
 					...emp,
 					name: formatEmployeeName(emp.employee_id),
@@ -224,7 +230,8 @@ export function calculateBestUpgrades(gameState, items, baseEmployeesMap, upgrad
 					price: sellValue,
 					qty: safeCount,
 					isOwned: true,
-					isEmployee: true
+					isEmployee: true,
+					isLocked
 				});
 			}
 		}
@@ -364,6 +371,9 @@ export function calculateBestUpgrades(gameState, items, baseEmployeesMap, upgrad
 		})
 		.filter((c) => c.value > 0 || c.isOwned)
 		.sort((a, b) => {
+			if (a.isLocked && !b.isLocked) return -1;
+			if (!a.isLocked && b.isLocked) return 1;
+
 			const aIsMod =
 				MODIFIER_TYPES.includes(a.itemType) || (a.itemType && a.itemType.includes('water'));
 			const bIsMod =
@@ -614,6 +624,7 @@ export function calculateBestUpgrades(gameState, items, baseEmployeesMap, upgrad
 				entry.total += i.price * BigInt(qty);
 			} else {
 				map.set(i.refId, {
+					refId: i.refId,
 					name: i.itemName || i.name,
 					qty: qty,
 					total: i.price * BigInt(qty),

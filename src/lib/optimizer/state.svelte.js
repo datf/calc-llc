@@ -21,9 +21,28 @@ class OptimizerManager {
 			const employeesForProfession = getOrgChart(gameState.professionId);
 			const employeeMap = new Map(employeesForProfession.map((e) => [e.employee_id, e]));
 
-			this.results = calculateBestUpgrades(gameState, itemsMap, employeeMap, this.strategy);
+			this.results = calculateBestUpgrades(
+				gameState,
+				itemsMap,
+				employeeMap,
+				this.strategy,
+				this.lockedItems
+			);
 			this.isCalculating = false;
 		}, 50);
+	}
+
+	lockedItems = $state([]);
+
+	toggleLock(refId) {
+		if (!refId) return;
+		if (this.lockedItems.includes(refId)) {
+			this.lockedItems = this.lockedItems.filter((id) => id !== refId);
+		} else {
+			this.lockedItems.push(refId);
+		}
+		// Automatically recalculate when a lock changes
+		this.execute();
 	}
 }
 

@@ -32,13 +32,29 @@
 					<option value="QUESTS">Suggest Quests</option>
 				</select>
 			</div>
-			<button
-				onclick={() => optimizer.execute()}
-				disabled={optimizer.isCalculating}
-				class="px-6 py-2 bg-yellow-600 hover:bg-yellow-500 text-black font-bold rounded shadow-[0_0_10px_rgba(202,138,4,0.4)] disabled:opacity-50 transition-colors"
-			>
-				{optimizer.isCalculating ? 'Calculating...' : 'Re-calculate Upgrades'}
-			</button>
+
+			<div class="flex gap-2">
+				<!-- Clear Locks Button -->
+				{#if optimizer.lockedItems?.length > 0}
+					<button
+						onclick={() => {
+							optimizer.lockedItems = [];
+							optimizer.execute();
+						}}
+						class="px-4 py-2 bg-red-900/50 hover:bg-red-800 text-red-200 text-sm font-bold rounded transition-colors"
+					>
+						Clear Locks ({optimizer.lockedItems.length})
+					</button>
+				{/if}
+
+				<button
+					onclick={() => optimizer.execute()}
+					disabled={optimizer.isCalculating}
+					class="px-6 py-2 bg-yellow-600 hover:bg-yellow-500 text-black font-bold rounded shadow-[0_0_10px_rgba(202,138,4,0.4)] disabled:opacity-50 transition-colors"
+				>
+					{optimizer.isCalculating ? 'Calculating...' : 'Re-calculate Upgrades'}
+				</button>
+			</div>
 		</div>
 	{/if}
 
@@ -79,9 +95,31 @@
 								<ul class="space-y-1">
 									{#each option.sell.items as item}
 										<li
-											class="flex justify-between items-center text-xs bg-red-950/20 px-2 py-1 rounded border border-red-900/30"
+											class="flex justify-between items-center text-xs bg-red-950/20 px-2 py-1 rounded border border-red-900/30 group"
 										>
 											<span class="flex items-center gap-1.5 truncate">
+												<!-- Pure SVG Lock Toggle Button -->
+												<button
+													onclick={() => optimizer.toggleLock(item.refId)}
+													class="text-red-400 hover:text-white transition-colors p-1 rounded hover:bg-white/10"
+													title="Lock to prevent selling"
+												>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														width="12"
+														height="12"
+														viewBox="0 0 24 24"
+														fill="none"
+														stroke="currentColor"
+														stroke-width="2"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+													>
+														<rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+														<path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
+													</svg>
+												</button>
+
 												{#if item.pics[0]}<img
 														src={item.pics[0]}
 														alt="icon"
