@@ -1,7 +1,7 @@
 /** @typedef {import('./calculator/state.svelte.js').Loadout} Loadout */
 /** @typedef {import('./calculator/state.svelte.js').LoadoutSource} LoadoutSource */
 import { calculateLoadoutDPS, CONSUMABLE_TYPES } from './calculator.js';
-import { items as ALL_ITEMS } from './database.js';
+import { items as ALL_ITEMS, tilesPerLayer, maps } from './database.js';
 
 // --- CATEGORIZATION CONSTANTS ---
 export const IGNORED_TYPES = [
@@ -282,7 +282,7 @@ export function calculateBestUpgrades(gameState, items, baseEmployeesMap, upgrad
 	}
 
 	// 4. Calculate Values and Densities
-	const roundDuration = Number(gameState.secondsPerRound || 300);
+	const roundDuration = Number(gameState.secondsPerRound || 100);
 
 	const candidates = [...shopItems, ...inventoryItems]
 		.map((c) => {
@@ -468,6 +468,119 @@ export function calculateBestUpgrades(gameState, items, baseEmployeesMap, upgrad
 			if (slotName === 'jet') hasJet = true;
 			if (slotName === 'kick') hasKick = true;
 			if (slotName === 'water') hasWater = true;
+		}
+	}
+
+	let requiredThroughput = 0;
+	let targetLayer = null;
+
+	if (highestWeaponDPS > 0 && typeof tilesPerLayer !== 'undefined') {
+		let maxValidHealth = -1;
+		for (const layerId in tilesPerLayer) {
+			const layer = tilesPerLayer[layerId];
+			if (layer.avgHealth / highestWeaponDPS <= 20) {
+				if (layer.avgHealth > maxValidHealth) {
+					maxValidHealth = layer.avgHealth;
+					targetLayer = layer;
+				}
+			}
+		}
+		if (targetLayer && targetLayer.avgHealth > 0) {
+			const timeToBreakAvgBlock = targetLayer.avgHealth / highestWeaponDPS;
+			requiredThroughput = targetLayer.avgCoalYield / timeToBreakAvgBlock;
+		}
+	}
+
+	let travelDistance = 100; // Fallback
+	if (targetLayer && typeof maps !== 'undefined' && gameState.map && maps[gameState.map]) {
+		const mapData = maps[gameState.map];
+		const shiftUp = Number(gameState.bonus_equipment_manager?.shift_layers_up || 0);
+
+		let targetMaxLevel = 0;
+		if (targetLayer.tiles) {
+			for (const t of targetLayer.tiles) {
+				if (t.max_level > targetMaxLevel) targetMaxLevel = t.max_level;
+			}
+		}
+
+		if (mapData.layers) {
+			let calculatedDepth = 0;
+			for (const layer of mapData.layers) {
+				if (layer.level >= shiftUp && layer.level <= targetMaxLevel) {
+					calculatedDepth += layer.thickness_in_tiles;
+				}
+			}
+			if (calculatedDepth > 0) {
+				travelDistance = calculatedDepth;
+			}
+		}
+	}
+
+	const capMult = 1 + Number(gameState.passives?.employee_collector_capacity || 0);
+	const speedMult = 1 + Number(gameState.passives?.employee_collector_speed || 0);
+
+	let ownedThroughput = 0;
+	const shopCollectors = [];
+
+	for (const [id, emp] of allEmployees.entries()) {
+		if (emp.type === '1') {
+			const effCap = Number(emp.inventory_space || 0) * capMult;
+			const effSpeed = Number(emp.fly_speed || 0) * speedMult;
+			const tripTime = (travelDistance * 2) / (effSpeed || 1); // Exact round trip
+			const throughput = effCap / tripTime;
+			const cost = emp._cumulativeCost;
+
+			const ownedQtyStr = String(gameState.hiredEmployees?.[id] || '0').replace('n', '');
+			const ownedQty = Number(ownedQtyStr);
+
+			if (ownedQty > 0) {
+				ownedThroughput += throughput * ownedQty;
+			}
+
+			if (cost > 0n && cost <= maxCapacity) {
+				shopCollectors.push({
+					...emp,
+					refId: id,
+					price: cost,
+					_throughput: throughput,
+					_efficiency: throughput / Number(cost)
+				});
+			}
+		}
+	}
+
+	let deficit = 0;
+	const dailyQuota = Number(gameState.quota || 0);
+
+	if (requiredThroughput * roundDuration > dailyQuota && ownedThroughput < requiredThroughput) {
+		deficit = requiredThroughput - ownedThroughput;
+	}
+
+	if (deficit > 0) {
+		shopCollectors.sort((a, b) => b._efficiency - a._efficiency);
+
+		for (const sc of shopCollectors) {
+			if (deficit <= 0 || currentLedgerCash <= 0n) break;
+
+			const costNum = Number(sc.price);
+			if (costNum > currentLedgerCash) continue;
+
+			const neededQty = Math.ceil(deficit / sc._throughput);
+			const affordableQty = Math.floor(Number(currentLedgerCash) / costNum);
+			const buyQty = Math.min(neededQty, affordableQty);
+
+			if (buyQty > 0) {
+				deficit -= buyQty * sc._throughput;
+				currentLedgerCash -= BigInt(costNum * buyQty);
+
+				optimalSelection.push({
+					...sc,
+					name: formatEmployeeName(sc.employee_id),
+					qty: buyQty,
+					isOwned: false,
+					isEmployee: true
+				});
+			}
 		}
 	}
 
