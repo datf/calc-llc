@@ -2,6 +2,8 @@
 	import OptimizerWidget from '$lib/components/OptimizerWidget.svelte';
 	import ResourcePriceWidget from '$lib/components/ResourcePriceWidget.svelte';
 	import DashboardCalculatorWidget from '$lib/components/DashboardCalculatorWidget.svelte';
+
+	import { dev } from '$app/environment';
 </script>
 
 <div class="page-wrapper page-wide">
@@ -29,5 +31,12 @@
 		<div class="lg:col-span-1 flex flex-col max-h-[600px]">
 			<ResourcePriceWidget />
 		</div>
+		{#if dev}
+			<div class="lg:col-span-2 flex flex-col">
+				{#await import('$lib/components/OptimizerTestWidget.svelte') then { default: OptimizerTestWidget }}
+					<OptimizerTestWidget />
+				{/await}
+			</div>
+		{/if}
 	</div>
 </div>
