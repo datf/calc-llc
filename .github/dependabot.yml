@@ -10,10 +10,10 @@ updates:
     schedule:
       interval: 'daily'
     assignees:
-      - "datf"
+      - 'datf'
   - package-ecosystem: 'docker' # See documentation for possible values
     directory: '/' # Location of package manifests
     schedule:
       interval: 'weekly'
     assignees:
-      - "datf"
+      - 'datf'
