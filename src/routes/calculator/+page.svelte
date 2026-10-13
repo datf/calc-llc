@@ -1,8 +1,8 @@
 <script>
-	import { gameState } from '$lib/game.svelte.js';
-	import { formatLargeNumber } from '$lib/utils.js';
-	import { formatDPS, getTimeToDestroyInfo } from '$lib/utils.js';
-	import { calcState } from '$lib/calculator/state.svelte.js';
+	import { gameState } from '#lib/game.svelte.js';
+	import { formatLargeNumber } from '#lib/utils.js';
+	import { formatDPS, getTimeToDestroyInfo } from '#lib/utils.js';
+	import { calcState } from '#lib/calculator/state.svelte.js';
 </script>
 
 <div class="mb-8 theme-surface border theme-border rounded-xl overflow-hidden">

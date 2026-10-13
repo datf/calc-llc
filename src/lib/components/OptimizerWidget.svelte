@@ -1,7 +1,7 @@
 <script>
-	import { optimizer } from '$lib/optimizer/state.svelte.js';
-	import { calcState } from '$lib/calculator/state.svelte.js';
-	import { formatLargeNumber, formatDPS } from '$lib/utils.js';
+	import { optimizer } from '#lib/optimizer/state.svelte.js';
+	import { calcState } from '#lib/calculator/state.svelte.js';
+	import { formatLargeNumber, formatDPS } from '#lib/utils.js';
 
 	let { compact = false, maxResults = 3 } = $props();
 

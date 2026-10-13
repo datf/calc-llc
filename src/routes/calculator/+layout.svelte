@@ -1,11 +1,11 @@
 <script>
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 
 	let { children } = $props();
 
-	const calculatorPath = resolve('/calculator');
-	const suggestionsPath = resolve('/calculator/suggestions');
+	const calculatorPath = resolve('calculator');
+	const suggestionsPath = resolve('calculator/suggestions');
 </script>
 
 <div class="page-wrapper page-wide">
@@ -22,7 +22,7 @@
 	<div class="flex gap-2 border-b theme-border pb-px">
 		<a
 			href={calculatorPath}
-			class="px-6 py-3 font-bold rounded-t-lg {$page.url.pathname === calculatorPath
+			class="px-6 py-3 font-bold rounded-t-lg {page.url.pathname === calculatorPath
 				? 'theme-surface theme-surface-hover theme-text-accent border-t border-l border-r theme-border'
 				: 'theme-surface theme-text-muted hover:theme-text'}"
 		>
@@ -30,7 +30,7 @@
 		</a>
 		<a
 			href={suggestionsPath}
-			class="px-6 py-3 font-bold rounded-t-lg {$page.url.pathname === suggestionsPath
+			class="px-6 py-3 font-bold rounded-t-lg {page.url.pathname === suggestionsPath
 				? 'theme-surface theme-surface-hover theme-text-accent border-t border-l border-r theme-border'
 				: 'theme-surface theme-text-muted hover:theme-text'}"
 		>

@@ -1,8 +1,8 @@
 <script>
 	import OrgNode from './OrgNode.svelte';
-	import { formatLargeNumber } from '$lib/utils.js';
-	import { gameState } from '$lib/game.svelte.js';
-	import { employees, items } from '$lib/database.js';
+	import { formatLargeNumber } from '#lib/utils.js';
+	import { gameState } from '#lib/game.svelte.js';
+	import { employees, items } from '#lib/database.js';
 
 	let { employee } = $props();
 

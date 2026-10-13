@@ -1,13 +1,13 @@
-import { gameState } from '$lib/game.svelte.js';
-import { tiles, items, employees, passiveMap } from '$lib/database.js';
-import { calculateLoadoutDPS } from '$lib/calculator.js';
+import { gameState } from '#lib/game.svelte.js';
+import { tiles, items, employees, passiveMap } from '#lib/database.js';
+import { calculateLoadoutDPS } from '#lib/calculator.js';
 import {
 	IGNORED_TYPES,
 	INDEPENDENT_TYPES,
 	MODIFIER_TYPES,
 	NON_STACKABLE_TYPES,
 	formatEmployeeName
-} from '$lib/optimizer.js';
+} from '#lib/optimizer.js';
 
 const LAYER_PROGRESSION = ['dirt', 'clay', 'stone', 'ice', 'fire', 'dark'];
 

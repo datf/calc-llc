@@ -1,7 +1,7 @@
 <script>
-	import { calculateBestUpgrades } from '$lib/optimizer.js';
-	import { getOrgChart, getItemsForProfession } from '$lib/database.js';
-	import { gameState } from '$lib/game.svelte.js';
+	import { calculateBestUpgrades } from '#lib/optimizer.js';
+	import { getOrgChart, getItemsForProfession } from '#lib/database.js';
+	import { gameState } from '#lib/game.svelte.js';
 
 	let testName = $state('should optimize correctly for this edge case');
 	let lockedItemsInput = $state('');

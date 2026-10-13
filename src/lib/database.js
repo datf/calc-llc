@@ -1,4 +1,4 @@
-import professionsRaw from '$lib/data/professions.json';
+import professionsRaw from '#lib/data/professions.json';
 /**
  * @typedef {Object} GameItem
  * @property {string} itemID - The unique identifier.
@@ -16,12 +16,12 @@ import professionsRaw from '$lib/data/professions.json';
  * @property {number} [cooldown_secs] - Magic speed.
  * @property {number} [bullet_count] - Number of projectiles.
  */
-import itemsRaw from '$lib/data/items.json';
-import itemOrderRaw from '$lib/data/items_sorted.json';
-import employeesRaw from '$lib/data/employees.json';
-import passivesRaw from '$lib/data/passives.json';
-import tilesRaw from '$lib/data/tiles.json';
-import mapsRaw from '$lib/data/maps.json';
+import itemsRaw from '#lib/data/items.json';
+import itemOrderRaw from '#lib/data/items_sorted.json';
+import employeesRaw from '#lib/data/employees.json';
+import passivesRaw from '#lib/data/passives.json';
+import tilesRaw from '#lib/data/tiles.json';
+import mapsRaw from '#lib/data/maps.json';
 
 export const passivesInfo = passivesRaw.all_passives;
 export const passiveMap = passivesRaw.passive_map;

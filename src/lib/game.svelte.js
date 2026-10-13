@@ -1,4 +1,4 @@
-import { items, employees, professions, maps, PASSIVE_KEYS } from '$lib/database.js';
+import { items, employees, professions, maps, PASSIVE_KEYS } from '#lib/database.js';
 
 // Dropdown options
 export const GAME_OPTIONS = {

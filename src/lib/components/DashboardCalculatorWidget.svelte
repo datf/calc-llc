@@ -1,7 +1,7 @@
 <script>
-	import { calcState } from '$lib/calculator/state.svelte.js';
-	import { gameState } from '$lib/game.svelte.js';
-	import { formatLargeNumber, formatDPS } from '$lib/utils.js';
+	import { calcState } from '#lib/calculator/state.svelte.js';
+	import { gameState } from '#lib/game.svelte.js';
+	import { formatLargeNumber, formatDPS } from '#lib/utils.js';
 
 	// Helper to format seconds into something readable
 	function formatTime(seconds) {

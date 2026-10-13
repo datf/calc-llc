@@ -1,7 +1,7 @@
 <script>
-	import { gameState } from '$lib/game.svelte.js';
-	import { getItemsForProfession, items } from '$lib/database.js';
-	import { formatLargeNumber, formatDecimal } from '$lib/utils.js';
+	import { gameState } from '#lib/game.svelte.js';
+	import { getItemsForProfession, items } from '#lib/database.js';
+	import { formatLargeNumber, formatDecimal } from '#lib/utils.js';
 
 	let availableEquipment = $derived([...getItemsForProfession(gameState.professionId)]);
 
@@ -18,7 +18,7 @@
 	// POPUP STATE FOR CUSTOM AMOUNTS
 	let showPopup = $state(false);
 
-	let selectedItem = $state(/** @type {import('$lib/database.js').GameItem | null} */ (null));
+	let selectedItem = $state(/** @type {import('#lib/database.js').GameItem | null} */ (null));
 
 	let inputQty = $state(1n);
 

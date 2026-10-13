@@ -1,6 +1,6 @@
 <script>
-	import { getOrgChart } from '$lib/database.js';
-	import { gameState } from '$lib/game.svelte.js';
+	import { getOrgChart } from '#lib/database.js';
+	import { gameState } from '#lib/game.svelte.js';
 	import OrgNode from './OrgNode.svelte';
 
 	let orgChart = $derived(getOrgChart(gameState.professionId));

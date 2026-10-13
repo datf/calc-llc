@@ -1,19 +1,19 @@
 <script lang="ts">
-	import favicon from '$lib/assets/favicon.svg';
+	import favicon from '#lib/assets/favicon.svg';
 	import '../app.css';
-	import { gameState, GAME_OPTIONS } from '$lib/game.svelte.js';
-	import { page } from '$app/stores';
+	import { gameState, GAME_OPTIONS } from '#lib/game.svelte.js';
+	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { setContext } from 'svelte';
-	import { handleSaveFileUpload } from '$lib/saveHandler.js';
+	import { handleSaveFileUpload } from '#lib/saveHandler.js';
 
 	const navLinks = [
 		{ href: resolve('/'), label: 'Welcome' },
-		{ href: resolve('/dashboard'), label: 'Dashboard' },
-		{ href: resolve('/employees'), label: 'Employees' },
-		{ href: resolve('/equipment'), label: 'Equipment' },
-		{ href: resolve('/passives'), label: 'Passives' },
-		{ href: resolve('/calculator'), label: 'Calculator' }
+		{ href: resolve('dashboard'), label: 'Dashboard' },
+		{ href: resolve('employees'), label: 'Employees' },
+		{ href: resolve('equipment'), label: 'Equipment' },
+		{ href: resolve('passives'), label: 'Passives' },
+		{ href: resolve('calculator'), label: 'Calculator' }
 	];
 
 	let theme = $state('dark');
@@ -350,7 +350,7 @@
 									stroke-linejoin="round"
 									stroke-width="2"
 									d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-								/>
+								></path>
 							</svg>
 							Reload Save
 						{:else}
@@ -483,8 +483,9 @@
 			{#each navLinks as { href, label }}
 				{@const isActive =
 					href === resolve('/')
-						? $page.url.pathname === resolve('/')
-						: $page.url.pathname.startsWith(href)}
+						? page.url.pathname === resolve('/')
+						: page.url.pathname.startsWith(href)}
+
 				<a
 					{href}
 					class="px-2 py-1 transition-all duration-200 border-b-2 whitespace-nowrap

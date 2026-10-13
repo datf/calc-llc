@@ -1,8 +1,8 @@
 <!-- src/routes/passives/+page.svelte -->
 <script>
-	import { gameState } from '$lib/game.svelte.js';
-	import { PASSIVE_KEYS, passivesInfo, getBonusShopItems } from '$lib/database.js';
-	import { formatLargeNumber } from '$lib/utils.js';
+	import { gameState } from '#lib/game.svelte.js';
+	import { PASSIVE_KEYS, passivesInfo, getBonusShopItems } from '#lib/database.js';
+	import { formatLargeNumber } from '#lib/utils.js';
 
 	// --- BONUS SHOP LOGIC ---
 	// Get all bonus items for this profession, but filter out the ones the player has already bought!

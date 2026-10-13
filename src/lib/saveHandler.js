@@ -1,4 +1,4 @@
-import { gameState } from '$lib/game.svelte.js';
+import { gameState } from '#lib/game.svelte.js';
 
 export async function handleSaveFileUpload(file, silent = false) {
 	if (!file) return false;

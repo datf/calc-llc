@@ -1,6 +1,6 @@
 <script>
-	import { tiles } from '$lib/database.js';
-	import { formatLargeNumber } from '$lib/utils.js';
+	import { tiles } from '#lib/database.js';
+	import { formatLargeNumber } from '#lib/utils.js';
 
 	let materials = $derived.by(() => {
 		const map = new Map();

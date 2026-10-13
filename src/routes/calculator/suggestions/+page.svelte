@@ -1,5 +1,5 @@
 <script>
-	import OptimizerWidget from '$lib/components/OptimizerWidget.svelte';
+	import OptimizerWidget from '#lib/components/OptimizerWidget.svelte';
 </script>
 
 <div class="p-4">

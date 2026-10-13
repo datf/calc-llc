@@ -1,6 +1,6 @@
-import { gameState } from '$lib/game.svelte.js';
-import { getItemsForProfession, getOrgChart } from '$lib/database.js';
-import { calculateBestUpgrades } from '$lib/optimizer.js';
+import { gameState } from '#lib/game.svelte.js';
+import { getItemsForProfession, getOrgChart } from '#lib/database.js';
+import { calculateBestUpgrades } from '#lib/optimizer.js';
 
 class OptimizerManager {
 	strategy = $state('MAX_DPS');
