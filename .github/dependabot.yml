@@ -14,12 +14,12 @@ updates:
   - package-ecosystem: 'docker' # See documentation for possible values
     directory: '/' # Location of package manifests
     schedule:
-      interval: 'weekly'
+      interval: 'daily'
     assignees:
       - 'datf'
   - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:
-      interval: 'monthly'
+      interval: 'daily'
     assignees:
       - 'datf'
