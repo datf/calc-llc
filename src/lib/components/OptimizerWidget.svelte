@@ -158,8 +158,9 @@
 												<span class="theme-text-muted">{item.qty} x</span>
 												{item.name}
 											</span>
-											<span class="text-green-300 font-mono">-{formatLargeNumber(item.total)}g</span
-											>
+											<span class="text-green-300 font-mono">
+												-{formatLargeNumber(item.total)}g
+											</span>
 										</li>
 									{/each}
 								</ul>

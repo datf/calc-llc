@@ -20,9 +20,9 @@
 
 		<!-- Loadout Selector -->
 		<div>
-			<label for="widget-loadout" class="block text-xs font-bold theme-text-muted mb-1 uppercase"
-				>Active Loadout</label
-			>
+			<label for="widget-loadout" class="block text-xs font-bold theme-text-muted mb-1 uppercase">
+				Active Loadout
+			</label>
 			<select
 				id="widget-loadout"
 				bind:value={calcState.calculatorActiveLoadoutId}
@@ -63,9 +63,9 @@
 							</div>
 						</div>
 						<div class="text-xs theme-text-muted">
-							Requires breaking <strong class="theme-text"
-								>{formatLargeNumber(quota.blocksNeeded)}</strong
-							> blocks.
+							Requires breaking <strong class="theme-text">
+								{formatLargeNumber(quota.blocksNeeded)}
+							</strong> blocks.
 						</div>
 						<div
 							class="mt-2 text-xs font-mono font-bold {quota.isPossibleThisRound

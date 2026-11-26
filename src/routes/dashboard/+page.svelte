@@ -17,9 +17,9 @@
 			<div class="flex justify-between items-center mb-4 px-1">
 				<h2 class="font-bold text-lg">Next Best Upgrade</h2>
 
-				<a href="/calculator/suggestions" class="text-xs text-blue-400 hover:underline"
-					>View All →</a
-				>
+				<a href="/calculator/suggestions" class="text-xs text-blue-400 hover:underline">
+					View All →
+				</a>
 			</div>
 
 			<div class="flex-grow mb-4"><OptimizerWidget compact={true} maxResults={1} /></div>

@@ -7,9 +7,9 @@
 
 <div class="mb-8 theme-surface border theme-border rounded-xl overflow-hidden">
 	<div class="flex items-center gap-2 p-4 var(--bg-main) border-b theme-border overflow-x-auto">
-		<span class="theme-text-muted font-bold uppercase tracking-wider text-sm mr-2 shrink-0"
-			>Loadouts:</span
-		>
+		<span class="theme-text-muted font-bold uppercase tracking-wider text-sm mr-2 shrink-0">
+			Loadouts:
+		</span>
 		{#each calcState.calculatorLoadouts as loadout}
 			<div
 				class="flex items-center theme-surface theme-surface-hover rounded-lg border {calcState.calculatorActiveLoadoutId ===
@@ -28,8 +28,10 @@
 				{#if calcState.calculatorLoadouts.length > 1}
 					<button
 						class="px-2 py-2 theme-text-muted hover:text-red-400"
-						onclick={() => calcState.removeLoadout(loadout.id)}>✕</button
+						onclick={() => calcState.removeLoadout(loadout.id)}
 					>
+						✕
+					</button>
 				{/if}
 			</div>
 		{/each}
@@ -43,9 +45,9 @@
 
 	<div class="p-6">
 		<p class="text-sm theme-text-muted mb-4">
-			Click items to toggle them for <strong class="theme-text-accent"
-				>{calcState.activeLoadout.name}</strong
-			>. Adjust quantities using the inputs.
+			Click items to toggle them for <strong class="theme-text-accent">
+				{calcState.activeLoadout.name}
+			</strong>. Adjust quantities using the inputs.
 		</p>
 
 		<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -82,8 +84,10 @@
 								<span
 									class="text-xs font-bold {calcState.isSourceActive(source)
 										? 'theme-text'
-										: 'theme-text-muted'}">{source.name}</span
+										: 'theme-text-muted'}"
 								>
+									{source.name}
+								</span>
 								{#if calcState.isSourceActive(source)}
 									{@const activeRef = calcState.getActiveRef(
 										calcState.activeLoadout.modifiers,
@@ -102,18 +106,19 @@
 												bind:value={activeRef.activeCount}
 												class="w-14 text-xs px-1 py-0.5 rounded var(--bg-main) theme-text border theme-border focus:theme-border-hover outline-none"
 											/>
-											<span class="text-[9px] theme-text-muted"
-												>/ {formatLargeNumber(source.ownedCount)}</span
-											>
+											<span class="text-[9px] theme-text-muted">
+												/ {formatLargeNumber(source.ownedCount)}
+											</span>
 										</div>
 									{:else}
-										<span class="text-[9px] text-blue-300 mt-0.5 font-semibold">Active (Max 1)</span
-										>
+										<span class="text-[9px] text-blue-300 mt-0.5 font-semibold">
+											Active (Max 1)
+										</span>
 									{/if}
 								{:else}
-									<span class="text-[9px] theme-text-muted"
-										>Owned: {formatLargeNumber(source.ownedCount)}</span
-									>
+									<span class="text-[9px] theme-text-muted">
+										Owned: {formatLargeNumber(source.ownedCount)}
+									</span>
 								{/if}
 							</div>
 						</div>
@@ -156,8 +161,10 @@
 								<span
 									class="text-xs font-bold {calcState.isSourceActive(source)
 										? 'theme-text'
-										: 'theme-text-muted'}">{source.name}</span
+										: 'theme-text-muted'}"
 								>
+									{source.name}
+								</span>
 								{#if calcState.isSourceActive(source)}
 									{@const activeRef = calcState.getActiveRef(
 										calcState.activeLoadout.independents,
@@ -176,19 +183,19 @@
 												bind:value={activeRef.activeCount}
 												class="w-14 text-xs px-1 py-0.5 rounded var(--bg-main) theme-text border theme-border focus:theme-border-hover outline-none"
 											/>
-											<span class="text-[9px] theme-text-muted"
-												>/ {formatLargeNumber(source.ownedCount)}</span
-											>
+											<span class="text-[9px] theme-text-muted">
+												/ {formatLargeNumber(source.ownedCount)}
+											</span>
 										</div>
 									{:else}
-										<span class="text-[9px] text-green-300 mt-0.5 font-semibold"
-											>Active (Max 1)</span
-										>
+										<span class="text-[9px] text-green-300 mt-0.5 font-semibold">
+											Active (Max 1)
+										</span>
 									{/if}
 								{:else}
-									<span class="text-[9px] theme-text-muted"
-										>Owned: {formatLargeNumber(source.ownedCount)}</span
-									>
+									<span class="text-[9px] theme-text-muted">
+										Owned: {formatLargeNumber(source.ownedCount)}
+									</span>
 								{/if}
 							</div>
 						</div>
@@ -231,11 +238,13 @@
 								<span
 									class="text-xs font-bold {calcState.isSourceActive(source)
 										? 'theme-text'
-										: 'theme-text-muted'}">{source.name}</span
+										: 'theme-text-muted'}"
 								>
-								<span class="text-[9px] theme-text-muted"
-									>Owned: {formatLargeNumber(source.ownedCount)}</span
-								>
+									{source.name}
+								</span>
+								<span class="text-[9px] theme-text-muted">
+									Owned: {formatLargeNumber(source.ownedCount)}
+								</span>
 							</div>
 						</div>
 					{/each}
@@ -258,9 +267,9 @@
 								: 'var(--bg-main) theme-border theme-text-muted opacity-60'}"
 						>
 							<span class="uppercase">{passive.name}:</span>
-							<span class="font-bold {isActive ? 'theme-text-accent' : ''}"
-								>+{Math.round(passive.value * 100)}%</span
-							>
+							<span class="font-bold {isActive ? 'theme-text-accent' : ''}">
+								+{Math.round(passive.value * 100)}%
+							</span>
 						</div>
 					{/each}
 					{#if calcState.nonZeroPassives.length === 0}
@@ -331,8 +340,9 @@
 			<tr class="theme-surface theme-text text-sm uppercase tracking-wider">
 				<th
 					class="p-4 border-b border-r theme-border min-w-[280px] sticky left-0 theme-surface z-20 shadow-[2px_0_5px_rgba(0,0,0,0.3)]"
-					>Loadout</th
 				>
+					Loadout
+				</th>
 				{#each calcState.filteredTiles as tile}
 					<th class="p-4 border-b theme-border min-w-[120px]">
 						<div class="flex items-center gap-2">
@@ -353,9 +363,9 @@
 					</th>
 				{/each}
 				{#if calcState.filteredTiles.length === 0}
-					<th class="p-4 border-b theme-border theme-text-muted italic font-normal"
-						>No tiles match current filters.</th
-					>
+					<th class="p-4 border-b theme-border theme-text-muted italic font-normal">
+						No tiles match current filters.
+					</th>
 				{/if}
 			</tr>
 		</thead>
@@ -414,8 +424,9 @@
 									{#if (mod.activeCount ?? 0) > 1}
 										<span
 											class="absolute -bottom-2 -right-2 theme-surface theme-text text-[9px] font-bold px-1 rounded-full border theme-border"
-											>x{formatLargeNumber(mod.activeCount ?? 1)}</span
 										>
+											x{formatLargeNumber(mod.activeCount ?? 1)}
+										</span>
 									{/if}
 								</div>
 							{/each}
@@ -431,8 +442,9 @@
 										/>{/each}
 									{#if ind.activeCount > 1}<span
 											class="absolute -bottom-2 -right-2 theme-surface theme-text text-[9px] font-bold px-1 rounded-full border theme-border"
-											>x{formatLargeNumber(ind.activeCount)}</span
-										>{/if}
+										>
+											x{formatLargeNumber(ind.activeCount)}
+										</span>{/if}
 								</div>
 							{/each}
 						</div>
@@ -446,9 +458,9 @@
 								<div
 									class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center theme-surface border theme-border px-3 py-2 rounded shadow-[0_0_10px_rgba(0,0,0,0.5)] z-50 whitespace-nowrap pointer-events-none"
 								>
-									<span class="text-[9px] theme-text-muted uppercase tracking-wider mb-1"
-										>Yield / Block</span
-									>
+									<span class="text-[9px] theme-text-muted uppercase tracking-wider mb-1">
+										Yield / Block
+									</span>
 									<span class="font-mono theme-text-accent font-bold text-sm">
 										{tile.min_drop === tile.max_drop
 											? formatLargeNumber(tile.min_drop)
