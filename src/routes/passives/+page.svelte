@@ -80,9 +80,9 @@
 							<h3
 								class="text-lg theme-text-accent font-bold border-b theme-border pb-2 mb-3 leading-tight w-full"
 							>
-								{item.itemName} - <br /><span class="theme-text"
-									>${formatLargeNumber(item.itemBuyPrice)}</span
-								>
+								{item.itemName} - <br /><span class="theme-text">
+									${formatLargeNumber(item.itemBuyPrice)}
+								</span>
 							</h3>
 
 							<div class="flex gap-3 flex-1 mb-2 w-full">
@@ -104,9 +104,9 @@
 								</div>
 
 								<div class="flex-1 text-xs text-gray-300 flex flex-col justify-center">
-									<span class="theme-text-muted italic mb-1 uppercase tracking-wider"
-										>{item.itemType}</span
-									>
+									<span class="theme-text-muted italic mb-1 uppercase tracking-wider">
+										{item.itemType}
+									</span>
 									<span class="theme-text font-semibold">Click to unlock permanently!</span>
 								</div>
 							</div>

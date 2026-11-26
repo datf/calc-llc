@@ -157,9 +157,9 @@
 						<h3
 							class="text-lg theme-text-accent font-bold border-b theme-border pb-2 mb-3 leading-tight w-full"
 						>
-							{item.itemName} - <br /><span class="theme-text"
-								>${formatLargeNumber(item.itemBuyPrice)}</span
-							>
+							{item.itemName} - <br /><span class="theme-text">
+								${formatLargeNumber(item.itemBuyPrice)}
+							</span>
 						</h3>
 
 						<div class="flex gap-3 flex-1 mb-4 w-full">
